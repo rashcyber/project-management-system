@@ -1,0 +1,24 @@
+#root {
+  min-height: 100vh;
+}
+
+/* Placeholder page styling */
+.page-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.page-placeholder h1 {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.page-placeholder p {
+  font-size: 0.938rem;
+}

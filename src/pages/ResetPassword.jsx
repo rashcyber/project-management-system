@@ -1,0 +1,248 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Lock, Eye, EyeOff, KeyRound, Check } from 'lucide-react';
+import { Button } from '../components/common';
+import { supabase } from '../lib/supabase';
+import { toast } from '../store/toastStore';
+import './Auth.css';
+
+const ResetPassword = () => {
+  const [formData, setFormData] = useState({
+    password: '',
+    confirmPassword: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isValidSession, setIsValidSession] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if we have a valid recovery session
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      // Check URL for recovery token (Supabase adds this)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const type = hashParams.get('type');
+
+      if (type === 'recovery' && accessToken) {
+        // Set the session with the recovery token
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: hashParams.get('refresh_token') || '',
+        });
+
+        if (!error) {
+          setIsValidSession(true);
+        }
+      } else if (session) {
+        setIsValidSession(true);
+      }
+
+      setIsCheckingSession(false);
+    };
+
+    checkSession();
+  }, []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const validatePassword = () => {
+    if (formData.password.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return false;
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      toast.error('Password must contain an uppercase letter');
+      return false;
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      toast.error('Password must contain a lowercase letter');
+      return false;
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      toast.error('Password must contain a number');
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validatePassword()) return;
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: formData.password,
+      });
+
+      if (error) throw error;
+
+      toast.success('Password set successfully! You can now log in.');
+
+      // Sign out and redirect to login
+      await supabase.auth.signOut();
+      navigate('/login');
+    } catch (error) {
+      toast.error(error.message || 'Failed to set password');
+    }
+
+    setIsLoading(false);
+  };
+
+  if (isCheckingSession) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="auth-header">
+            <div className="auth-logo">
+              <KeyRound size={32} />
+            </div>
+            <h1>Verifying...</h1>
+            <p>Please wait while we verify your reset link.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isValidSession) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="auth-header">
+            <div className="auth-logo invalid">
+              <KeyRound size={32} />
+            </div>
+            <h1>Invalid or Expired Link</h1>
+            <p>This password reset link is invalid or has expired. Please request a new one.</p>
+          </div>
+          <div className="auth-footer">
+            <p>
+              <Link to="/login">Back to Login</Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <div className="auth-logo">
+            <KeyRound size={32} />
+          </div>
+          <h1>Set Your Password</h1>
+          <p>Create a secure password for your account</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="password-field">
+            <label className="input-label">New Password</label>
+            <div className="password-input-wrapper">
+              <span className="input-icon"><Lock size={18} /></span>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter your new password"
+                className="input input-with-icon"
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="password-field">
+            <label className="input-label">Confirm Password</label>
+            <div className="password-input-wrapper">
+              <span className="input-icon"><Lock size={18} /></span>
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm your new password"
+                className="input input-with-icon"
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Password Requirements */}
+          <div className="password-requirements">
+            <p>Password must contain:</p>
+            <ul>
+              <li className={formData.password.length >= 8 ? 'valid' : ''}>
+                <Check size={14} />
+                At least 8 characters
+              </li>
+              <li className={/[A-Z]/.test(formData.password) ? 'valid' : ''}>
+                <Check size={14} />
+                One uppercase letter
+              </li>
+              <li className={/[a-z]/.test(formData.password) ? 'valid' : ''}>
+                <Check size={14} />
+                One lowercase letter
+              </li>
+              <li className={/[0-9]/.test(formData.password) ? 'valid' : ''}>
+                <Check size={14} />
+                One number
+              </li>
+            </ul>
+          </div>
+
+          <Button
+            type="submit"
+            variant="primary"
+            size="large"
+            fullWidth
+            loading={isLoading}
+          >
+            Set Password
+          </Button>
+        </form>
+
+        <div className="auth-footer">
+          <p>
+            Remember your password?{' '}
+            <Link to="/login">Sign in</Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ResetPassword;
