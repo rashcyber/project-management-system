@@ -112,6 +112,15 @@ const useTaskStore = create((set, get) => ({
 
         if (assigneeError) throw assigneeError;
 
+        // Get actor's name for notification
+        const { data: actorProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+
+        const actorName = actorProfile?.full_name || 'Someone';
+
         // Create notifications for all new assignees
         for (const assigneeId of assignee_ids) {
           if (assigneeId !== user.id) {
@@ -119,9 +128,10 @@ const useTaskStore = create((set, get) => ({
               user_id: assigneeId,
               type: 'task_assigned',
               title: 'New Task Assigned',
-              message: `You have been assigned to: ${taskData.title}`,
+              message: `${actorName} assigned you to: ${taskData.title}`,
               task_id: data.id,
               project_id: taskData.project_id,
+              actor_id: user.id,
             });
           }
         }
@@ -218,6 +228,15 @@ const useTaskStore = create((set, get) => ({
 
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Get actor's name for notification
+      const { data: actorProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
+      const actorName = actorProfile?.full_name || 'Someone';
+
       // Notify new assignees who weren't previously assigned
       if (newAssigneeIds.length > 0) {
         const newAssignees = newAssigneeIds.filter(
@@ -228,9 +247,10 @@ const useTaskStore = create((set, get) => ({
             user_id: assigneeId,
             type: 'task_assigned',
             title: 'Task Assigned',
-            message: `You have been assigned to: ${data.title}`,
+            message: `${actorName} assigned you to: ${data.title}`,
             task_id: taskId,
             project_id: data.project_id,
+            actor_id: user.id,
           });
         }
       }
@@ -245,9 +265,10 @@ const useTaskStore = create((set, get) => ({
             user_id: assigneeId,
             type: 'task_updated',
             title: 'Task Status Updated',
-            message: `Task "${data.title}" moved to ${updates.status.replace('_', ' ')}`,
+            message: `${actorName} moved "${data.title}" to ${updates.status.replace('_', ' ')}`,
             task_id: taskId,
             project_id: data.project_id,
+            actor_id: user.id,
           });
         }
       }
@@ -391,13 +412,22 @@ const useTaskStore = create((set, get) => ({
       if (assignedTo && task) {
         const { data: { user } } = await supabase.auth.getUser();
         if (assignedTo !== user.id) {
+          const { data: actorProfile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single();
+
+          const actorName = actorProfile?.full_name || 'Someone';
+
           await supabase.from('notifications').insert({
             user_id: assignedTo,
             type: 'task_assigned',
             title: 'Subtask Assigned',
-            message: `You have been assigned to a subtask: "${title}"`,
+            message: `${actorName} assigned you to a subtask: "${title}"`,
             task_id: taskId,
             project_id: task.project_id,
+            actor_id: user.id,
           });
         }
       }
@@ -543,13 +573,22 @@ const useTaskStore = create((set, get) => ({
       // Get task to notify assignee
       const task = get().tasks.find(t => t.id === taskId);
       if (task?.assignee_id && task.assignee_id !== user.id) {
+        const { data: actorProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+
+        const actorName = actorProfile?.full_name || 'Someone';
+
         await supabase.from('notifications').insert({
           user_id: task.assignee_id,
           type: 'task_comment',
           title: 'New Comment',
-          message: `New comment on "${task.title}"`,
+          message: `${actorName} commented on "${task.title}"`,
           task_id: taskId,
           project_id: task.project_id,
+          actor_id: user.id,
         });
       }
 
@@ -580,6 +619,7 @@ const useTaskStore = create((set, get) => ({
                 message: `${data.user?.full_name || 'Someone'} mentioned you in "${task.title}"`,
                 task_id: taskId,
                 project_id: task.project_id,
+                actor_id: user.id,
               });
             }
           }

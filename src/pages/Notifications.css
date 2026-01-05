@@ -129,6 +129,17 @@
   background-color: var(--bg-hover);
 }
 
+.notification-item-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.notification-actor {
+  flex-shrink: 0;
+}
+
 /* Icon */
 .notification-icon {
   display: flex;

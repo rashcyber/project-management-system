@@ -18,7 +18,7 @@ const PRIORITY_CONFIG = {
   urgent: { label: 'Urgent', color: '#ef4444' },
 };
 
-const TaskCard = ({ task, onClick, onEdit, isDragging = false }) => {
+const TaskCard = React.memo(({ task, onClick, onEdit, isDragging = false }) => {
   const {
     attributes,
     listeners,
@@ -141,6 +141,8 @@ const TaskCard = ({ task, onClick, onEdit, isDragging = false }) => {
       </div>
     </div>
   );
-};
+});
+
+TaskCard.displayName = 'TaskCard';
 
 export default TaskCard;

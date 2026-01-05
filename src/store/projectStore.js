@@ -197,12 +197,22 @@ const useProjectStore = create((set, get) => ({
 
       if (error) throw error;
 
+      // Get actor's name for notification
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { data: actorProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', authUser.id)
+        .single();
+
+      const actorName = actorProfile?.full_name || 'Someone';
+
       // Create notification for the added user
       await supabase.from('notifications').insert({
         user_id: userId,
         type: 'project_invite',
         title: 'Added to Project',
-        message: `You have been added to a project`,
+        message: `${actorName} added you to a project`,
         project_id: projectId,
       });
 
@@ -248,6 +258,110 @@ const useProjectStore = create((set, get) => ({
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
+    }
+  },
+
+  // Fetch project files
+  fetchProjectFiles: async (projectId) => {
+    try {
+      const { data, error } = await supabase
+        .from('project_files')
+        .select(`
+          *,
+          uploader:profiles(id, full_name, avatar_url)
+        `)
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+
+      return { data, error };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  // Upload project file
+  uploadProjectFile: async (projectId, file) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Generate unique file path
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${projectId}/${fileName}`;
+
+      // Upload file to storage
+      const { error: uploadError } = await supabase.storage
+        .from('project-files')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get file metadata
+      const fileMetadata = {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      };
+
+      // Insert file record in database
+      const { data, error } = await supabase
+        .from('project_files')
+        .insert({
+          project_id: projectId,
+          name: file.name,
+          file_path: filePath,
+          file_size: file.size,
+          mime_type: file.type,
+          uploaded_by: user.id,
+        })
+        .select(`
+          *,
+          uploader:profiles(id, full_name, avatar_url)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  // Delete project file
+  deleteProjectFile: async (projectId, fileId) => {
+    try {
+      // Get file info first
+      const { data: fileData } = await supabase
+        .from('project_files')
+        .select('file_path')
+        .eq('id', fileId)
+        .single();
+
+      if (!fileData) {
+        throw new Error('File not found');
+      }
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('project-files')
+        .remove([fileData.file_path]);
+
+      if (storageError) {
+        console.error('Storage error:', storageError);
+      }
+
+      // Delete from database
+      const { error } = await supabase
+        .from('project_files')
+        .delete()
+        .eq('id', fileId);
+
+      if (error) throw error;
+
+      return { error: null };
+    } catch (error) {
+      return { error };
     }
   },
 }));

@@ -3,7 +3,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { Plus } from 'lucide-react';
 import './BoardColumn.css';
 
-const BoardColumn = ({ id, title, color, count, children, onAddTask }) => {
+const BoardColumn = React.memo(({ id, title, color, count, children, onAddTask }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: id,
   });
@@ -37,6 +37,8 @@ const BoardColumn = ({ id, title, color, count, children, onAddTask }) => {
       </div>
     </div>
   );
-};
+});
+
+BoardColumn.displayName = 'BoardColumn';
 
 export default BoardColumn;

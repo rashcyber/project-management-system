@@ -27,7 +27,7 @@ import useProjectStore from '../store/projectStore';
 import useActivityStore from '../store/activityStore';
 import useNotificationStore from '../store/notificationStore';
 import { supabase } from '../lib/supabase';
-import { format, formatDistanceToNow, isPast, isToday, isTomorrow, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
+import { format, formatDistanceToNow, isPast, isToday, isTomorrow, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays } from 'date-fns';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -103,9 +103,27 @@ const Dashboard = () => {
           .limit(5);
 
         // Fetch all tasks across user's projects
-        const { data: allTasks } = await supabase
+        let taskQuery = supabase
           .from('tasks')
-          .select('id, status, due_date, priority');
+          .select('id, status, due_date, priority, project_id');
+
+        // If not admin, only fetch tasks from projects user is a member of
+        const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
+        if (!isAdmin) {
+          const projectIds = projects.map(p => p.id);
+          if (projectIds.length > 0) {
+            taskQuery = taskQuery.in('project_id', projectIds);
+          } else {
+            // If no projects, return empty for global stats
+            setTaskDistribution({ not_started: 0, in_progress: 0, review: 0, completed: 0 });
+            setTaskByPriority({ low: 0, medium: 0, high: 0, urgent: 0 });
+            setStats({ totalProjects: 0, totalTasks: 0, completedTasks: 0, overdueTasks: 0, inProgressTasks: 0 });
+            setLoading(false);
+            return;
+          }
+        }
+
+        const { data: allTasks } = await taskQuery;
 
         if (userTasks) {
           setMyTasks(userTasks.slice(0, 5));
@@ -330,15 +348,25 @@ const Dashboard = () => {
 
       {/* Overdue Alert */}
       {upcomingDeadlines.overdue.length > 0 && (
-        <div className="dashboard-card overdue-alert-card" style={{ marginBottom: '1.5rem' }}>
+        <div
+          className="dashboard-card overdue-alert-card clickable"
+          style={{ marginBottom: '1.5rem', cursor: 'pointer' }}
+          onClick={() => navigate('/tasks?filter=overdue')}
+        >
           <div className="overdue-alert">
             <div className="overdue-alert-icon">
               <AlertTriangle size={28} />
             </div>
             <div className="overdue-alert-content">
               <h3>Attention: {upcomingDeadlines.overdue.length} Overdue Task{upcomingDeadlines.overdue.length > 1 ? 's' : ''}</h3>
-              <p>You have tasks past their due date. Click to view and update them.</p>
+              <p>
+                {upcomingDeadlines.overdue.length === 1
+                  ? `Your task is ${differenceInDays(new Date(), new Date(upcomingDeadlines.overdue[0].due_date))} day${differenceInDays(new Date(), new Date(upcomingDeadlines.overdue[0].due_date)) === 1 ? '' : 's'} overdue`
+                  : 'You have multiple tasks past their due date'}.
+                Click to view and update them.
+              </p>
             </div>
+            <ArrowRight size={20} className="alert-arrow" />
           </div>
         </div>
       )}

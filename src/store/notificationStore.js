@@ -15,7 +15,10 @@ const useNotificationStore = create((set, get) => ({
 
       const { data, error } = await supabase
         .from('notifications')
-        .select('*')
+        .select(`
+          *,
+          actor:profiles!notifications_actor_id_fkey(id, full_name, avatar_url)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);

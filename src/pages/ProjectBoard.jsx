@@ -21,12 +21,15 @@ import {
   Search,
   Settings,
   Users,
+  LayoutGrid,
+  Folder,
 } from 'lucide-react';
 import { Button, Modal, Loading } from '../components/common';
 import BoardColumn from '../components/tasks/BoardColumn';
 import TaskCard from '../components/tasks/TaskCard';
 import TaskForm from '../components/tasks/TaskForm';
 import TaskDetail from '../components/tasks/TaskDetail';
+import ProjectFiles from '../components/projects/ProjectFiles';
 import useProjectStore from '../store/projectStore';
 import useTaskStore from '../store/taskStore';
 import { useRealtimeTasks } from '../hooks';
@@ -56,6 +59,7 @@ const ProjectBoard = () => {
   const [initialStatus, setInitialStatus] = useState('not_started');
   const [searchQuery, setSearchQuery] = useState('');
   const [localTasks, setLocalTasks] = useState([]);
+  const [activeTab, setActiveTab] = useState('board');
 
   // Debounce search input for performance
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -340,54 +344,80 @@ const ProjectBoard = () => {
         </div>
       </div>
 
-      {/* Board */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-        <div className="board-columns">
-          {COLUMNS.map((column) => {
-            const columnTasks = getTasksByStatus(column.id);
-            return (
-              <BoardColumn
-                key={column.id}
-                id={column.id}
-                title={column.title}
-                color={column.color}
-                count={columnTasks.length}
-                onAddTask={() => handleAddTask(column.id)}
-              >
-                <SortableContext
-                  items={columnTasks.map((t) => t.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {columnTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onClick={() => handleViewTask(task)}
-                      onEdit={() => handleEditTask(task)}
-                    />
-                  ))}
-                </SortableContext>
-              </BoardColumn>
-            );
-          })}
-        </div>
+      {/* Tabs */}
+      <div className="board-tabs">
+        <button
+          className={`board-tab ${activeTab === 'board' ? 'active' : ''}`}
+          onClick={() => setActiveTab('board')}
+        >
+          <LayoutGrid size={18} />
+          Board
+        </button>
+        <button
+          className={`board-tab ${activeTab === 'files' ? 'active' : ''}`}
+          onClick={() => setActiveTab('files')}
+        >
+          <Folder size={18} />
+          Files
+        </button>
+      </div>
 
-        <DragOverlay dropAnimation={{
-          duration: 200,
-          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
-        }}>
-          {activeTask ? (
-            <TaskCard task={activeTask} isDragging />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      {/* Board */}
+      <div className="board-content">
+        {activeTab === 'board' && (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
+            <div className="board-columns">
+              {COLUMNS.map((column) => {
+                const columnTasks = getTasksByStatus(column.id);
+                return (
+                  <BoardColumn
+                    key={column.id}
+                    id={column.id}
+                    title={column.title}
+                    color={column.color}
+                    count={columnTasks.length}
+                    onAddTask={() => handleAddTask(column.id)}
+                  >
+                    <SortableContext
+                      items={columnTasks.map((t) => t.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {columnTasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          onClick={() => handleViewTask(task)}
+                          onEdit={() => handleEditTask(task)}
+                        />
+                      ))}
+                    </SortableContext>
+                  </BoardColumn>
+                );
+              })}
+            </div>
+
+            <DragOverlay dropAnimation={{
+              duration: 200,
+              easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+            }}>
+              {activeTask ? (
+                <TaskCard task={activeTask} isDragging />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
+
+        {activeTab === 'files' && (
+          <ProjectFiles projectId={projectId} />
+        )}
+      </div>
 
       {/* Task Form Modal */}
       <Modal

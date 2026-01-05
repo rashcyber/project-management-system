@@ -8,10 +8,12 @@ import {
   Plus,
   Clock,
   Calendar,
+  Trash2,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useNotificationStore from '../../store/notificationStore';
 import { Avatar } from '../common';
+import { supabase } from '../../lib/supabase';
 import './Navbar.css';
 import { format } from 'date-fns';
 
@@ -21,7 +23,14 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const { profile, signOut } = useAuthStore();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearAll
+  } = useNotificationStore();
   const navigate = useNavigate();
 
   const notificationRef = useRef(null);
@@ -118,6 +127,7 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
           className="navbar-btn"
           onClick={onThemeToggle}
           title={isDarkMode ? 'Light mode' : 'Dark mode'}
+          aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
@@ -126,6 +136,7 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
           <button
             className="navbar-btn notification-btn"
             onClick={() => setShowNotifications(!showNotifications)}
+            aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -137,11 +148,18 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
             <div className="notification-dropdown">
               <div className="notification-header">
                 <h3>Notifications</h3>
-                {unreadCount > 0 && (
-                  <button className="mark-all-read" onClick={markAllAsRead}>
-                    Mark all read
-                  </button>
-                )}
+                <div className="notification-header-actions">
+                  {unreadCount > 0 && (
+                    <button className="mark-all-read" onClick={markAllAsRead}>
+                      Mark all read
+                    </button>
+                  )}
+                  {notifications.length > 0 && (
+                    <button className="clear-all-btn" onClick={clearAll}>
+                      Clear all
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="notification-list">
@@ -157,6 +175,13 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
                       className={`notification-item ${!notification.read ? 'unread' : ''}`}
                       onClick={() => handleNotificationClick(notification)}
                     >
+                      <div className="notification-actor">
+                        <Avatar
+                          src={notification.actor?.avatar_url}
+                          name={notification.actor?.full_name}
+                          size="small"
+                        />
+                      </div>
                       <div className="notification-content">
                         <p className="notification-title">{notification.title}</p>
                         <p className="notification-message">{notification.message}</p>
@@ -164,6 +189,16 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
                           {formatTimeAgo(notification.created_at)}
                         </span>
                       </div>
+                      <button
+                        className="notification-item-clear"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(notification.id);
+                        }}
+                        title="Delete notification"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   ))
                 )}
@@ -187,6 +222,7 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
           className="navbar-btn create-btn"
           onClick={() => navigate('/projects/new')}
           title="Create new project"
+          aria-label="Create new project"
         >
           <Plus size={20} />
         </button>

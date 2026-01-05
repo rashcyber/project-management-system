@@ -35,14 +35,46 @@ const useActivityStore = create((set, get) => ({
   fetchAllActivities: async (limit = 100) => {
     set({ loading: true, error: null });
     try {
-      const { data, error } = await supabase
+      const { data: { user } = {} } = await supabase.auth.getUser();
+      if (!user) return { error: 'Not authenticated' };
+
+      // Get user profile for role check
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
+
+      let query = supabase
         .from('activity_log')
         .select(`
           *,
           user:profiles!activity_log_user_id_fkey(id, full_name, email, avatar_url),
           task:tasks(id, title),
           project:projects(id, name, color)
-        `)
+        `);
+
+      // If not admin, only show activities for projects the user is a member of
+      if (!isAdmin) {
+        const { data: memberships } = await supabase
+          .from('project_members')
+          .select('project_id')
+          .eq('user_id', user.id);
+
+        const projectIds = memberships?.map(m => m.project_id) || [];
+
+        if (projectIds.length > 0) {
+          query = query.in('project_id', projectIds);
+        } else {
+          // If not in any projects, return empty
+          set({ activities: [], loading: false });
+          return { data: [], error: null };
+        }
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(limit);
 

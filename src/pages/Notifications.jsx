@@ -10,7 +10,7 @@ import {
   CheckCheck,
   FolderKanban,
 } from 'lucide-react';
-import { Button } from '../components/common';
+import { Button, Avatar } from '../components/common';
 import useNotificationStore from '../store/notificationStore';
 import { format, formatDistanceToNow } from 'date-fns';
 import './Notifications.css';
@@ -123,8 +123,19 @@ const Notifications = () => {
                   className={`notification-item ${!notification.read ? 'unread' : ''}`}
                   onClick={() => handleNotificationClick(notification)}
                 >
-                  <div className={`notification-icon ${notification.type}`}>
-                    <Icon size={20} />
+                  <div className="notification-item-left">
+                    <div className={`notification-icon ${notification.type}`}>
+                      <Icon size={20} />
+                    </div>
+                    {notification.actor && (
+                      <div className="notification-actor">
+                        <Avatar
+                          src={notification.actor.avatar_url}
+                          name={notification.actor.full_name}
+                          size="medium"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="notification-content">

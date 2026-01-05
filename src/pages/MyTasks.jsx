@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   CheckSquare,
   Search,
@@ -11,6 +11,7 @@ import {
   Circle,
   Clock,
   AlertCircle,
+  X,
 } from 'lucide-react';
 import { Button, Avatar, Loading } from '../components/common';
 import useAuthStore from '../store/authStore';
@@ -34,6 +35,7 @@ const STATUS_CONFIG = {
 
 const MyTasks = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { profile } = useAuthStore();
 
   const [tasks, setTasks] = useState([]);
@@ -41,7 +43,17 @@ const MyTasks = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
   const [sortBy, setSortBy] = useState('due_date');
+
+  useEffect(() => {
+    if (searchParams.get('filter') === 'overdue') {
+      setShowOverdueOnly(true);
+      setStatusFilter('all');
+      // Clear the param to avoid it persisting on every refresh if the user changes filters manually
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     fetchTasks();
@@ -93,6 +105,10 @@ const MyTasks = () => {
     .filter((task) => {
       if (statusFilter !== 'all' && task.status !== statusFilter) return false;
       if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
+      if (showOverdueOnly) {
+        if (!task.due_date || task.status === 'completed') return false;
+        if (!isPast(new Date(task.due_date)) || isToday(new Date(task.due_date))) return false;
+      }
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return (
@@ -142,6 +158,15 @@ const MyTasks = () => {
     }).length,
   };
 
+  const hasActiveFilters = searchQuery !== '' || statusFilter !== 'all' || priorityFilter !== 'all' || showOverdueOnly;
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setShowOverdueOnly(false);
+  };
+
   return (
     <div className="my-tasks-page">
       <div className="my-tasks-header">
@@ -149,6 +174,16 @@ const MyTasks = () => {
           <h1>My Tasks</h1>
           <p>All tasks assigned to you across projects</p>
         </div>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="small"
+            onClick={resetFilters}
+            icon={<X size={16} />}
+          >
+            Clear Filters
+          </Button>
+        )}
       </div>
 
       {/* Stats */}

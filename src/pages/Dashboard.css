@@ -91,6 +91,32 @@
   margin-bottom: 2rem;
 }
 
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}
+
 .stat-card {
   display: flex;
   align-items: center;
@@ -957,6 +983,13 @@
 .overdue-alert-card {
   border-color: var(--danger);
   background-color: var(--danger-light);
+  transition: all var(--transition-fast);
+}
+
+.overdue-alert-card.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  background-color: rgba(239, 68, 68, 0.15); /* More consistent hover shade */
 }
 
 .overdue-alert {
@@ -964,6 +997,16 @@
   align-items: center;
   gap: 1rem;
   padding: 0.5rem;
+}
+
+.alert-arrow {
+  color: var(--danger);
+  opacity: 0.6;
+}
+
+.overdue-alert-card:hover .alert-arrow {
+  transform: translateX(4px);
+  opacity: 1;
 }
 
 .overdue-alert-icon {
