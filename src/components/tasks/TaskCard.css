@@ -248,3 +248,129 @@
   cursor: pointer;
   accent-color: var(--primary);
 }
+
+/* Responsive */
+/* Large Desktop */
+@media (max-width: 1200px) {
+  .task-card {
+    padding: 0.813rem;
+  }
+
+  .task-title {
+    font-size: 0.813rem;
+  }
+
+  .task-description {
+    font-size: 0.688rem;
+  }
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .task-card {
+    padding: 0.75rem;
+  }
+
+  .task-title {
+    font-size: 0.813rem;
+  }
+
+  .task-description {
+    font-size: 0.688rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .task-meta {
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .task-footer {
+    padding-top: 0.5rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .task-card {
+    padding: 0.688rem;
+  }
+
+  .task-labels {
+    margin-bottom: 0.5rem;
+  }
+
+  .task-label {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.438rem;
+  }
+
+  .task-title {
+    font-size: 0.813rem;
+    margin-bottom: 0.313rem;
+  }
+
+  .task-description {
+    font-size: 0.688rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .task-meta {
+    gap: 0.5rem;
+  }
+
+  .task-due-date,
+  .task-subtasks,
+  .task-comments {
+    font-size: 0.625rem;
+  }
+
+  .task-due-date svg,
+  .task-subtasks svg,
+  .task-comments svg,
+  .task-priority-flag svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .task-footer {
+    padding-top: 0.5rem;
+    min-height: 28px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .task-card {
+    padding: 0.625rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .task-title {
+    font-size: 0.75rem;
+  }
+
+  .task-description {
+    font-size: 0.625rem;
+  }
+
+  .task-meta {
+    gap: 0.438rem;
+  }
+
+  .task-footer {
+    margin-left: 0.188rem;
+    margin-right: 0.188rem;
+  }
+
+  .task-assignees .avatar {
+    width: 22px;
+    height: 22px;
+  }
+
+  .more-assignees {
+    width: 22px;
+    height: 22px;
+    font-size: 0.563rem;
+  }
+}
