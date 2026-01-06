@@ -39,6 +39,7 @@ import TaskDetail from '../components/tasks/TaskDetail';
 import ProjectFiles from '../components/projects/ProjectFiles';
 import useProjectStore from '../store/projectStore';
 import useTaskStore from '../store/taskStore';
+import useDependencyStore from '../store/dependencyStore';
 import { useRealtimeTasks } from '../hooks';
 import { toast } from '../store/toastStore';
 import useDebounce from '../hooks/useDebounce';
@@ -58,6 +59,7 @@ const ProjectBoard = () => {
 
   const { currentProject, fetchProject, loading: projectLoading } = useProjectStore();
   const { tasks, fetchTasks, updateTask, deleteTask, loading: tasksLoading } = useTaskStore();
+  const { fetchDependencies } = useDependencyStore();
 
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
@@ -123,8 +125,9 @@ const ProjectBoard = () => {
     if (projectId) {
       fetchProject(projectId);
       fetchTasks(projectId);
+      fetchDependencies(projectId);
     }
-  }, [projectId, fetchProject, fetchTasks]);
+  }, [projectId, fetchProject, fetchTasks, fetchDependencies]);
 
   // Real-time subscription for task updates
   useRealtimeTasks(projectId, {

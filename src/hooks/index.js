@@ -4,3 +4,5 @@ export {
   useRealtimeMembers,
   useRealtimeComments,
 } from './useRealtimeSubscription';
+export { default as useDebounce } from './useDebounce';
+export { default as useKeyboardShortcuts } from './useKeyboardShortcuts';

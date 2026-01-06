@@ -10,19 +10,41 @@ const useDependencyStore = create((set, get) => ({
   fetchDependencies: async (projectId) => {
     set({ loading: true, error: null });
     try {
+      // First get all tasks for this project
+      const { data: projectTasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('project_id', projectId);
+
+      if (tasksError) throw tasksError;
+
+      const taskIds = projectTasks.map(t => t.id);
+
+      if (taskIds.length === 0) {
+        set({ dependencies: [], loading: false });
+        return { data: [], error: null };
+      }
+
+      // Then get all dependencies for those tasks
       const { data, error } = await supabase
         .from('task_dependencies')
         .select(`
           *,
-          blocking_task:tasks!task_dependencies_blocking_task_id_fkey(id, title, status, priority),
-          blocked_task:tasks!task_dependencies_blocked_task_id_fkey(id, title, status, priority)
+          blocking_task:tasks!task_dependencies_blocking_task_id_fkey(id, title, status, priority, project_id),
+          blocked_task:tasks!task_dependencies_blocked_task_id_fkey(id, title, status, priority, project_id)
         `)
-        .eq('project_id', projectId);
+        .or(`blocking_task_id.in.(${taskIds.join(',')}),blocked_task_id.in.(${taskIds.join(',')})`);
 
       if (error) throw error;
 
-      set({ dependencies: data || [], loading: false });
-      return { data: data || [], error: null };
+      // Filter to only include dependencies where both tasks are in this project
+      const filteredData = (data || []).filter(dep =>
+        dep.blocking_task?.project_id === projectId &&
+        dep.blocked_task?.project_id === projectId
+      );
+
+      set({ dependencies: filteredData, loading: false });
+      return { data: filteredData, error: null };
     } catch (error) {
       set({ error: error.message, loading: false });
       return { data: null, error };

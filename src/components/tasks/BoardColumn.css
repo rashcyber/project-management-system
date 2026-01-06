@@ -31,6 +31,22 @@
   gap: 0.5rem;
 }
 
+.column-select-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin: 0;
+}
+
+.column-select-all input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+  margin: 0;
+}
+
 .column-dot {
   width: 10px;
   height: 10px;
