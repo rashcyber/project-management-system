@@ -435,11 +435,36 @@
     left: 1rem;
     right: 1rem;
     width: auto;
+    max-height: calc(100vh - 80px);
+  }
+
+  .notification-list {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .user-dropdown {
     position: fixed;
     top: 64px;
     right: 1rem;
+  }
+}
+
+/* Enhanced touch targets for mobile */
+@media (max-width: 640px) {
+  .navbar-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .notification-item {
+    padding: 1rem;
+    min-height: 60px;
+  }
+
+  .user-dropdown-menu button {
+    padding: 0.875rem 1rem;
+    min-height: 48px;
   }
 }
