@@ -23,8 +23,15 @@ import {
   Users,
   LayoutGrid,
   Folder,
+  CheckSquare,
+  Trash2,
+  ArrowRight,
+  X,
+  List,
+  HelpCircle,
 } from 'lucide-react';
-import { Button, Modal, Loading } from '../components/common';
+import { Button, Modal, Loading, KeyboardShortcutsModal } from '../components/common';
+import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
 import BoardColumn from '../components/tasks/BoardColumn';
 import TaskCard from '../components/tasks/TaskCard';
 import TaskForm from '../components/tasks/TaskForm';
@@ -50,7 +57,7 @@ const ProjectBoard = () => {
   const [searchParams] = useSearchParams();
 
   const { currentProject, fetchProject, loading: projectLoading } = useProjectStore();
-  const { tasks, fetchTasks, updateTask, loading: tasksLoading } = useTaskStore();
+  const { tasks, fetchTasks, updateTask, deleteTask, loading: tasksLoading } = useTaskStore();
 
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
@@ -61,8 +68,31 @@ const ProjectBoard = () => {
   const [localTasks, setLocalTasks] = useState([]);
   const [activeTab, setActiveTab] = useState('board');
 
+  // Batch actions state
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState([]);
+  const [showBatchActions, setShowBatchActions] = useState(false);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
+  // Search input ref for keyboard focus
+  const searchInputRef = React.useRef(null);
+
   // Debounce search input for performance
   const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Setup keyboard shortcuts
+  useKeyboardShortcuts({
+    onBatchModeToggle: handleToggleBatchMode,
+    onDeleteSelected: handleBatchDelete,
+    onCompleteSelected: handleBatchComplete,
+    onFocusSearch: () => searchInputRef.current?.focus(),
+    onShowHelp: () => setShowShortcutsModal(true),
+    isBatchMode,
+    hasSelection: selectedTasks.length > 0,
+    canDelete: selectedTasks.length > 0,
+    canComplete: selectedTasks.length > 0,
+  });
 
   // Sync local tasks with store tasks
   useEffect(() => {
@@ -286,6 +316,105 @@ const ProjectBoard = () => {
     setSelectedTask(null);
   };
 
+  // Batch actions handlers
+  const handleToggleSelect = useCallback((taskId) => {
+    setSelectedTasks(prev =>
+      prev.includes(taskId)
+        ? prev.filter(id => id !== taskId)
+        : [...prev, taskId]
+    );
+  }, []);
+
+  const handleToggleBatchMode = () => {
+    setIsBatchMode(prev => !prev);
+    if (isBatchMode) {
+      setSelectedTasks([]);
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedTasks.length === 0) return;
+    if (!window.confirm(`Delete ${selectedTasks.length} selected tasks?`)) return;
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const taskId of selectedTasks) {
+      const { error } = await deleteTask(taskId);
+      if (error) {
+        errorCount++;
+      } else {
+        successCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Deleted ${successCount} task${successCount > 1 ? 's' : ''}`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to delete ${errorCount} task${errorCount > 1 ? 's' : ''}`);
+    }
+
+    setSelectedTasks([]);
+    fetchTasks(projectId);
+  };
+
+  const handleBatchMove = async (newStatus) => {
+    if (selectedTasks.length === 0) return;
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const taskId of selectedTasks) {
+      const task = localTasks.find(t => t.id === taskId);
+      if (task) {
+        const { error } = await updateTask(taskId, { status: newStatus });
+        if (error) {
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Moved ${successCount} task${successCount > 1 ? 's' : ''} to ${newStatus.replace('_', ' ')}`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to move ${errorCount} task${errorCount > 1 ? 's' : ''}`);
+    }
+
+    setSelectedTasks([]);
+    setShowMoveModal(false);
+    fetchTasks(projectId);
+  };
+
+  const handleBatchComplete = async () => {
+    if (selectedTasks.length === 0) return;
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const taskId of selectedTasks) {
+      const { error } = await updateTask(taskId, { status: 'completed' });
+      if (error) {
+        errorCount++;
+      } else {
+        successCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Completed ${successCount} task${successCount > 1 ? 's' : ''}`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to complete ${errorCount} task${errorCount > 1 ? 's' : ''}`);
+    }
+
+    setSelectedTasks([]);
+    fetchTasks(projectId);
+  };
+
   if (projectLoading || !currentProject) {
     return <Loading fullscreen text="Loading project..." />;
   }
@@ -311,36 +440,89 @@ const ProjectBoard = () => {
         </div>
 
         <div className="board-header-right">
-          <div className="board-search">
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          {/* Batch mode toggle */}
           <Button
-            variant="secondary"
-            icon={<Users size={18} />}
-            onClick={() => navigate(`/projects/${projectId}/team`)}
+            variant={isBatchMode ? 'primary' : 'secondary'}
+            icon={<CheckSquare size={18} />}
+            onClick={handleToggleBatchMode}
           >
-            Team
+            {isBatchMode ? 'Exit Selection' : 'Select Tasks'}
           </Button>
-          <Button
-            variant="secondary"
-            icon={<Settings size={18} />}
-            onClick={() => navigate(`/projects/${projectId}/settings`)}
-          >
-            Settings
-          </Button>
-          <Button
-            variant="primary"
-            icon={<Plus size={18} />}
-            onClick={() => handleAddTask('not_started')}
-          >
-            Add Task
-          </Button>
+
+          {/* Batch actions toolbar */}
+          {isBatchMode && selectedTasks.length > 0 && (
+            <div className="batch-actions-toolbar">
+              <span className="batch-count">{selectedTasks.length} selected</span>
+              <Button
+                variant="ghost"
+                size="small"
+                icon={<ArrowRight size={16} />}
+                onClick={() => setShowMoveModal(true)}
+              >
+                Move
+              </Button>
+              <Button
+                variant="ghost"
+                size="small"
+                icon={<CheckSquare size={16} />}
+                onClick={handleBatchComplete}
+              >
+                Complete
+              </Button>
+              <Button
+                variant="ghost"
+                size="small"
+                icon={<Trash2 size={16} />}
+                onClick={handleBatchDelete}
+                className="delete-btn"
+              >
+                Delete
+              </Button>
+            </div>
+          )}
+
+          {!isBatchMode && (
+            <>
+              <div className="board-search">
+                <Search size={16} />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search tasks... (press / to focus)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Button
+                variant="secondary"
+                icon={<Users size={18} />}
+                onClick={() => navigate(`/projects/${projectId}/team`)}
+              >
+                Team
+              </Button>
+              <Button
+                variant="secondary"
+                icon={<Settings size={18} />}
+                onClick={() => navigate(`/projects/${projectId}/settings`)}
+              >
+                Settings
+              </Button>
+              <Button
+                variant="ghost"
+                icon={<HelpCircle size={18} />}
+                onClick={() => setShowShortcutsModal(true)}
+                title="Keyboard shortcuts (?)"
+              >
+              </Button>
+              <Button
+                variant="primary"
+                icon={<Plus size={18} />}
+                onClick={() => handleAddTask('not_started')}
+              >
+                Add Task
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -384,6 +566,9 @@ const ProjectBoard = () => {
                     color={column.color}
                     count={columnTasks.length}
                     onAddTask={() => handleAddTask(column.id)}
+                    showCheckbox={isBatchMode}
+                    selectedTasks={selectedTasks}
+                    onToggleSelect={handleToggleSelect}
                   >
                     <SortableContext
                       items={columnTasks.map((t) => t.id)}
@@ -395,6 +580,9 @@ const ProjectBoard = () => {
                           task={task}
                           onClick={() => handleViewTask(task)}
                           onEdit={() => handleEditTask(task)}
+                          isSelected={selectedTasks.includes(task.id)}
+                          onSelect={handleToggleSelect}
+                          showCheckbox={isBatchMode}
                         />
                       ))}
                     </SortableContext>
@@ -454,6 +642,39 @@ const ProjectBoard = () => {
           />
         )}
       </Modal>
+
+      {/* Batch Move Modal */}
+      <Modal
+        isOpen={showMoveModal}
+        onClose={() => setShowMoveModal(false)}
+        title="Move Tasks"
+        size="small"
+      >
+        <div className="batch-move-options">
+          <p>Select a status to move {selectedTasks.length} task{selectedTasks.length > 1 ? 's' : ''} to:</p>
+          <div className="move-options-list">
+            {COLUMNS.map((column) => (
+              <button
+                key={column.id}
+                className="move-option-btn"
+                onClick={() => handleBatchMove(column.id)}
+              >
+                <div
+                  className="move-option-dot"
+                  style={{ backgroundColor: column.color }}
+                />
+                <span>{column.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+      />
     </div>
   );
 };

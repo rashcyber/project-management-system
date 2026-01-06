@@ -6,3 +6,4 @@ export { default as Toast } from './Toast';
 export { default as Loading } from './Loading';
 export { default as MentionInput } from './MentionInput';
 export { default as DeleteConfirmModal } from './DeleteConfirmModal';
+export { default as KeyboardShortcutsModal } from './KeyboardShortcutsModal';

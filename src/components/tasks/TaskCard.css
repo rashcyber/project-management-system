@@ -182,3 +182,56 @@
 .task-card {
   animation: taskEnter 0.2s ease;
 }
+
+/* Blocked indicator */
+.task-blocked-indicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background-color: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  border-radius: var(--radius);
+  color: #f97316;
+  cursor: help;
+}
+
+.task-card.is-blocked {
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.task-card.is-blocked:hover {
+  border-color: #f97316;
+}
+
+/* Selected state */
+.task-card.is-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Selection checkbox */
+.task-select-checkbox {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background-color: var(--bg-primary);
+  border-radius: var(--radius);
+}
+
+.task-select-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}

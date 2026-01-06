@@ -9,9 +9,11 @@ import {
   Clock,
   Calendar,
   Trash2,
+  Search,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useNotificationStore from '../../store/notificationStore';
+import useSearchStore from '../../store/searchStore';
 import { Avatar } from '../common';
 import { supabase } from '../../lib/supabase';
 import './Navbar.css';
@@ -123,6 +125,15 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
       </div>
 
       <div className="navbar-right">
+        <button
+          className="navbar-btn search-toggle-btn"
+          onClick={() => useSearchStore.getState().toggleOpen()}
+          title="Search (Cmd+K)"
+          aria-label="Open search"
+        >
+          <Search size={20} />
+        </button>
+
         <button
           className="navbar-btn"
           onClick={onThemeToggle}

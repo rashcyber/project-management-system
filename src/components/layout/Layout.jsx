@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { Loading } from '../common';
 import ToastContainer from '../common/ToastContainer';
+import GlobalSearch from '../common/GlobalSearch';
 import useAuthStore from '../../store/authStore';
 import useNotificationStore from '../../store/notificationStore';
 import './Layout.css';
@@ -98,6 +99,7 @@ const Layout = () => {
       </div>
 
       <ToastContainer />
+      <GlobalSearch />
     </div>
   );
 };

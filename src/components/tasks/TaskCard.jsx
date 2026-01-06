@@ -6,10 +6,12 @@ import {
   MessageSquare,
   CheckSquare,
   Flag,
+  Link2,
 } from 'lucide-react';
 import { Avatar } from '../common';
 import { format, isPast, isToday } from 'date-fns';
 import './TaskCard.css';
+import useDependencyStore from '../../store/dependencyStore';
 
 const PRIORITY_CONFIG = {
   low: { label: 'Low', color: '#22c55e' },
@@ -18,7 +20,7 @@ const PRIORITY_CONFIG = {
   urgent: { label: 'Urgent', color: '#ef4444' },
 };
 
-const TaskCard = React.memo(({ task, onClick, onEdit, isDragging = false }) => {
+const TaskCard = React.memo(({ task, onClick, onEdit, isDragging = false, isSelected = false, onSelect, showCheckbox = false }) => {
   const {
     attributes,
     listeners,
@@ -27,6 +29,9 @@ const TaskCard = React.memo(({ task, onClick, onEdit, isDragging = false }) => {
     transition,
     isDragging: isSortableDragging,
   } = useSortable({ id: task.id });
+
+  // Use dependency store to check if task is blocked
+  const { isTaskBlocked } = useDependencyStore();
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -38,6 +43,7 @@ const TaskCard = React.memo(({ task, onClick, onEdit, isDragging = false }) => {
   const completedSubtasks = task.subtasks?.filter((s) => s.completed).length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
   const commentsCount = task.comments?.length || 0;
+  const blocked = isTaskBlocked(task.id);
 
   const getDueDateStatus = () => {
     if (!task.due_date) return null;
@@ -50,17 +56,48 @@ const TaskCard = React.memo(({ task, onClick, onEdit, isDragging = false }) => {
 
   const dueDateStatus = getDueDateStatus();
 
+  const handleClick = (e) => {
+    if (showCheckbox && onSelect) {
+      // If checkbox was clicked, don't trigger card click
+      if (e.target.type === 'checkbox') {
+        return;
+      }
+      // If clicking on the card but not the checkbox, toggle selection
+      onSelect(task.id);
+    } else if (onClick) {
+      onClick(e);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className={`task-card ${isDragging ? 'is-dragging' : ''}`}
-      onClick={onClick}
+      className={`task-card ${isDragging ? 'is-dragging' : ''} ${blocked ? 'is-blocked' : ''} ${isSelected ? 'is-selected' : ''}`}
+      onClick={handleClick}
     >
+      {/* Selection checkbox */}
+      {showCheckbox && (
+        <div className="task-select-checkbox" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onSelect && onSelect(task.id)}
+          />
+        </div>
+      )}
+
       {/* Priority indicator */}
       <div className="task-priority" style={{ backgroundColor: priority.color }} />
+
+      {/* Blocked indicator */}
+      {blocked && (
+        <div className="task-blocked-indicator" title="This task is blocked by another task">
+          <Link2 size={12} />
+        </div>
+      )}
 
       {/* Labels */}
       {task.task_labels?.length > 0 && (

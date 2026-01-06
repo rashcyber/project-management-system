@@ -20,8 +20,11 @@ import {
   Upload,
   File as FileIcon,
   Eye,
+  Link2,
 } from 'lucide-react';
-import { Button, Avatar, Input, MentionInput, Loading } from '../common';
+import { Button, Modal, Avatar, Input, MentionInput, Loading } from '../common';
+import TaskDependencies from './TaskDependencies';
+import useDependencyStore from '../../store/dependencyStore';
 import useTaskStore from '../../store/taskStore';
 import useAuthStore from '../../store/authStore';
 import { toast } from '../../store/toastStore';
@@ -884,6 +887,13 @@ const TaskDetail = ({ task, onClose, onEdit, members }) => {
           </div>
         )}
       </div>
+
+      {/* Task Dependencies */}
+      <TaskDependencies
+        task={task}
+        projectId={task.project_id}
+        members={members}
+      />
     </div>
   );
 };
