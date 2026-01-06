@@ -3,6 +3,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 0.875rem;
+  padding-bottom: 1rem;
   cursor: grab;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
@@ -128,8 +129,10 @@
   align-items: center;
   justify-content: space-between;
   margin-left: 0.25rem;
+  margin-right: 0.25rem;
   padding-top: 0.625rem;
   border-top: 1px solid var(--border-light);
+  min-height: 32px;
 }
 
 .task-unassigned {
@@ -141,14 +144,24 @@
 .task-assignees {
   display: flex;
   align-items: center;
+  padding-left: 2px;
 }
 
 .task-assignees .avatar {
   border: 2px solid var(--bg-primary);
-  margin-left: -6px;
+  margin-left: -8px;
+  transition: transform var(--transition-fast);
 }
 
 .task-assignees .avatar:first-child {
+  margin-left: 0;
+}
+
+.task-card:hover .task-assignees .avatar {
+  margin-left: -4px;
+}
+
+.task-card:hover .task-assignees .avatar:first-child {
   margin-left: 0;
 }
 
