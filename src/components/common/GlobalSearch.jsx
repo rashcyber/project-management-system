@@ -74,17 +74,17 @@ const GlobalSearch = () => {
   };
 
   const handleNavigate = (type, item) => {
+    // Navigate immediately without closing the modal first
+    // The modal will close automatically when route changes
+    if (type === 'project') {
+      navigate(`/projects/${item.id}/board`);
+    } else if (type === 'task') {
+      navigate(`/projects/${item.project_id}/board?task=${item.id}`);
+    } else if (type === 'file') {
+      navigate(`/projects/${item.project_id}/board?tab=files`);
+    }
+    // Close the modal after navigation
     handleClose();
-    // Navigate after closing to ensure clean state
-    setTimeout(() => {
-      if (type === 'project') {
-        navigate(`/projects/${item.id}/board`);
-      } else if (type === 'task') {
-        navigate(`/projects/${item.project_id}/board?task=${item.id}`);
-      } else if (type === 'file') {
-        navigate(`/projects/${item.project_id}/board?tab=files`);
-      }
-    }, 100);
   };
 
   const hasResults = results.projects.length > 0 ||
