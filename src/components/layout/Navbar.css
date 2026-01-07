@@ -102,18 +102,34 @@
 .search-toggle-btn {
   visibility: visible !important;
   opacity: 1 !important;
-  z-index: 10;
-  border: 1px solid transparent; /* Add border for visibility */
+  z-index: 100 !important;
+  border: 1px solid transparent;
+  position: relative;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  background-color: transparent !important;
 }
 
 .search-toggle-btn svg {
-  color: var(--text-secondary);
+  color: var(--text-secondary) !important;
+  width: 20px !important;
+  height: 20px !important;
 }
 
 .search-toggle-btn:hover {
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-color: var(--primary);
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--primary) !important;
+}
+
+/* Force button to be visible */
+.navbar-right .search-toggle-btn {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* Debug border to make sure button is visible */

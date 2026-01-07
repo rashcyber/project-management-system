@@ -125,16 +125,42 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
       </div>
 
       <div className="navbar-right">
+        {/* Debug Search Button - Always Visible */}
+        <div style={{ position: 'relative', zIndex: 1000 }}>
+          <button
+            className="navbar-btn search-toggle-btn"
+            onClick={() => {
+              console.log('Search button clicked, store state:', useSearchStore.getState());
+              useSearchStore.getState().toggleOpen();
+            }}
+            title="Search (Cmd+K)"
+            aria-label="Open search"
+            style={{
+              minWidth: '40px',
+              minHeight: '40px',
+              position: 'relative',
+              zIndex: 1000,
+              border: '2px solid blue', /* Debug border */
+              backgroundColor: 'rgba(255,255,255,0.1)',
+            }}
+          >
+            <Search size={20} style={{ color: 'blue' }} />
+            <span style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.5 }}>🔍</span>
+          </button>
+        </div>
+
         <button
           className="navbar-btn search-toggle-btn"
           onClick={() => {
-            console.log('Search button clicked');
+            console.log('Search button clicked, store state:', useSearchStore.getState());
             useSearchStore.getState().toggleOpen();
           }}
           title="Search (Cmd+K)"
           aria-label="Open search"
+          style={{ minWidth: '40px', minHeight: '40px' }}
         >
-          <Search size={20} />
+          <Search size={20} style={{ color: 'inherit' }} />
+          <span style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.5 }}>🔍</span>
         </button>
 
         <button
