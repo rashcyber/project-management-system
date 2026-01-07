@@ -127,7 +127,10 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
       <div className="navbar-right">
         <button
           className="navbar-btn search-toggle-btn"
-          onClick={() => useSearchStore.getState().toggleOpen()}
+          onClick={() => {
+            console.log('Search button clicked');
+            useSearchStore.getState().toggleOpen();
+          }}
           title="Search (Cmd+K)"
           aria-label="Open search"
         >

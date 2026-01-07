@@ -98,6 +98,39 @@
   display: none;
 }
 
+/* Ensure search toggle button is always visible */
+.search-toggle-btn {
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 10;
+  border: 1px solid transparent; /* Add border for visibility */
+}
+
+.search-toggle-btn svg {
+  color: var(--text-secondary);
+}
+
+.search-toggle-btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--primary);
+}
+
+/* Debug border to make sure button is visible */
+@media (max-width: 768px) {
+  .search-toggle-btn {
+    border: 1px solid red; /* Temporary debug border */
+  }
+}
+
+/* Mobile visibility */
+@media (max-width: 768px) {
+  .search-toggle-btn {
+    display: flex !important;
+    visibility: visible !important;
+  }
+}
+
 /* Navbar right */
 .navbar-right {
   display: flex;
