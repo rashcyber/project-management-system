@@ -83,6 +83,14 @@ const ProjectBoard = () => {
   // Debounce search input for performance
   const debouncedSearch = useDebounce(searchQuery, 300);
 
+  // Batch mode handlers
+  const handleToggleBatchMode = () => {
+    setIsBatchMode(prev => !prev);
+    if (isBatchMode) {
+      setSelectedTasks([]);
+    }
+  };
+
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
     onBatchModeToggle: handleToggleBatchMode,
@@ -327,13 +335,6 @@ const ProjectBoard = () => {
         : [...prev, taskId]
     );
   }, []);
-
-  const handleToggleBatchMode = () => {
-    setIsBatchMode(prev => !prev);
-    if (isBatchMode) {
-      setSelectedTasks([]);
-    }
-  };
 
   const handleBatchDelete = async () => {
     if (selectedTasks.length === 0) return;
