@@ -56,8 +56,13 @@ const useUserStore = create((set, get) => ({
   deleteUser: async (userId) => {
     set({ loading: true, error: null });
     try {
-      // Note: In production, you'd want to use a server-side function
-      // to delete from auth.users as well
+      // Remove user from task assignments first
+      await supabase.from('task_assignees').delete().eq('user_id', userId);
+
+      // Remove user from project memberships
+      await supabase.from('project_members').delete().eq('user_id', userId);
+
+      // Remove user from profiles table
       const { error } = await supabase
         .from('profiles')
         .delete()
