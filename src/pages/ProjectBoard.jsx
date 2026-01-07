@@ -91,9 +91,58 @@ const ProjectBoard = () => {
     }
   };
 
-  // Forward declarations for batch actions (defined later)
-  const handleBatchDelete = handleBatchDeleteImpl;
-  const handleBatchComplete = handleBatchCompleteImpl;
+  const handleBatchDelete = async () => {
+    if (selectedTasks.length === 0) return;
+    if (!window.confirm(`Delete ${selectedTasks.length} selected tasks?`)) return;
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const taskId of selectedTasks) {
+      const { error } = await deleteTask(taskId);
+      if (error) {
+        errorCount++;
+      } else {
+        successCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Deleted ${successCount} task${successCount > 1 ? 's' : ''}`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to delete ${errorCount} task${errorCount > 1 ? 's' : ''}`);
+    }
+
+    setSelectedTasks([]);
+    fetchTasks(projectId);
+  };
+
+  const handleBatchComplete = async () => {
+    if (selectedTasks.length === 0) return;
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const taskId of selectedTasks) {
+      const { error } = await updateTask(taskId, { status: 'completed' });
+      if (error) {
+        errorCount++;
+      } else {
+        successCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Completed ${successCount} task${successCount > 1 ? 's' : ''}`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to complete ${errorCount} task${errorCount > 1 ? 's' : ''}`);
+    }
+
+    setSelectedTasks([]);
+    fetchTasks(projectId);
+  };
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
@@ -166,7 +215,7 @@ const ProjectBoard = () => {
         setSelectedTask(taskId);
         setShowTaskDetail(true);
         // Clear the query param to avoid reopening on refresh
-        navigate(`/projects/${projectId}/board`, { replace: true });
+        navigate(`/projects/${projectId}/board`);
       }
     }
   }, [tasks, searchParams, projectId, navigate]);
