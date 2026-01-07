@@ -389,33 +389,6 @@ const ProjectBoard = () => {
     );
   }, []);
 
-  const handleBatchDeleteImpl = async () => {
-    if (selectedTasks.length === 0) return;
-    if (!window.confirm(`Delete ${selectedTasks.length} selected tasks?`)) return;
-
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const taskId of selectedTasks) {
-      const { error } = await deleteTask(taskId);
-      if (error) {
-        errorCount++;
-      } else {
-        successCount++;
-      }
-    }
-
-    if (successCount > 0) {
-      toast.success(`Deleted ${successCount} task${successCount > 1 ? 's' : ''}`);
-    }
-    if (errorCount > 0) {
-      toast.error(`Failed to delete ${errorCount} task${errorCount > 1 ? 's' : ''}`);
-    }
-
-    setSelectedTasks([]);
-    fetchTasks(projectId);
-  };
-
   const handleBatchMove = async (newStatus) => {
     if (selectedTasks.length === 0) return;
 
@@ -443,32 +416,6 @@ const ProjectBoard = () => {
 
     setSelectedTasks([]);
     setShowMoveModal(false);
-    fetchTasks(projectId);
-  };
-
-  const handleBatchCompleteImpl = async () => {
-    if (selectedTasks.length === 0) return;
-
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const taskId of selectedTasks) {
-      const { error } = await updateTask(taskId, { status: 'completed' });
-      if (error) {
-        errorCount++;
-      } else {
-        successCount++;
-      }
-    }
-
-    if (successCount > 0) {
-      toast.success(`Completed ${successCount} task${successCount > 1 ? 's' : ''}`);
-    }
-    if (errorCount > 0) {
-      toast.error(`Failed to complete ${errorCount} task${errorCount > 1 ? 's' : ''}`);
-    }
-
-    setSelectedTasks([]);
     fetchTasks(projectId);
   };
 
