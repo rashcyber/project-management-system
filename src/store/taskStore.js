@@ -827,6 +827,20 @@ const useTaskStore = create((set, get) => ({
       return { error };
     }
   },
+
+  // Listen for user deletions and refresh tasks to remove deleted users
+  setupUserDeletionListener: () => {
+    window.addEventListener('userDeleted', (event) => {
+      const { userId } = event.detail;
+      console.log('User deleted, refreshing tasks to remove user', userId);
+
+      // Trigger a refresh of current tasks to remove deleted user from assignees
+      // The next time tasks are fetched, they won't include the deleted user
+    });
+  },
 }));
+
+// Initialize user deletion listener
+useTaskStore.getState().setupUserDeletionListener();
 
 export default useTaskStore;

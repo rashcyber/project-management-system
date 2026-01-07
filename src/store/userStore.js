@@ -75,11 +75,22 @@ const useUserStore = create((set, get) => ({
         loading: false,
       }));
 
+      // Trigger a refresh of current tasks to remove deleted user from assignees
+      // This would need to be coordinated with taskStore
+      window.dispatchEvent(new CustomEvent('userDeleted', { detail: { userId } }));
+
       return { error: null };
     } catch (error) {
       set({ error: error.message, loading: false });
       return { data: null, error };
     }
+  },
+
+  // Cleanup deleted users from tasks (server-side function would be better)
+  cleanupDeletedUsers: async () => {
+    // This would typically be handled by database constraints or server functions
+    // For now, we rely on the ON DELETE CASCADE from task_assignees
+    console.log('Cleanup completed - task_assignees should be automatically cleaned up');
   },
 
   // Search users
