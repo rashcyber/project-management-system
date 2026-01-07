@@ -91,6 +91,10 @@ const ProjectBoard = () => {
     }
   };
 
+  // Forward declarations for batch actions (defined later)
+  const handleBatchDelete = handleBatchDeleteImpl;
+  const handleBatchComplete = handleBatchCompleteImpl;
+
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
     onBatchModeToggle: handleToggleBatchMode,
@@ -336,7 +340,7 @@ const ProjectBoard = () => {
     );
   }, []);
 
-  const handleBatchDelete = async () => {
+  const handleBatchDeleteImpl = async () => {
     if (selectedTasks.length === 0) return;
     if (!window.confirm(`Delete ${selectedTasks.length} selected tasks?`)) return;
 
@@ -393,7 +397,7 @@ const ProjectBoard = () => {
     fetchTasks(projectId);
   };
 
-  const handleBatchComplete = async () => {
+  const handleBatchCompleteImpl = async () => {
     if (selectedTasks.length === 0) return;
 
     let successCount = 0;
