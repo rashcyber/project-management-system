@@ -7,9 +7,11 @@
   cursor: grab;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   touch-action: none;
   user-select: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .task-card:hover {
@@ -144,13 +146,17 @@
 .task-assignees {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   padding-left: 2px;
+  gap: -8px;
+  flex-wrap: wrap;
 }
 
 .task-assignees .avatar {
   border: 2px solid var(--bg-primary);
   margin-left: -8px;
   transition: transform var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .task-assignees .avatar:first-child {

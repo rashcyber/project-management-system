@@ -228,10 +228,11 @@
 .notification-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   padding: 1rem;
   border-bottom: 1px solid var(--border-color);
-  position: relative;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .notification-header h3 {
@@ -239,14 +240,16 @@
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
+  flex: 1;
+  min-width: fit-content;
 }
 
 .notification-header-actions {
-  position: absolute;
-  right: 1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
+  white-space: nowrap;
 }
 
 .mark-all-read, .clear-all-btn {
