@@ -23,6 +23,7 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [notificationPage, setNotificationPage] = useState(1);
 
   const { profile, signOut } = useAuthStore();
   const {
@@ -183,7 +184,7 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
                     <p>No notifications yet</p>
                   </div>
                 ) : (
-                  notifications.slice(0, 5).map((notification) => (
+                  notifications.slice((notificationPage - 1) * 5, notificationPage * 5).map((notification) => (
                     <div
                       key={notification.id}
                       className={`notification-item ${!notification.read ? 'unread' : ''}`}
@@ -220,7 +221,28 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
 
               {notifications.length > 0 && (
                 <div className="notification-footer">
-                  <button onClick={() => {
+                  <div className="notification-pagination">
+                    {notificationPage > 1 && (
+                      <button
+                        className="pagination-btn"
+                        onClick={() => setNotificationPage(notificationPage - 1)}
+                      >
+                        Previous
+                      </button>
+                    )}
+                    <span className="pagination-info">
+                      {Math.min(notificationPage * 5, notifications.length)} of {notifications.length}
+                    </span>
+                    {notificationPage * 5 < notifications.length && (
+                      <button
+                        className="pagination-btn"
+                        onClick={() => setNotificationPage(notificationPage + 1)}
+                      >
+                        Load More
+                      </button>
+                    )}
+                  </div>
+                  <button className="view-all-btn" onClick={() => {
                     navigate('/notifications');
                     setShowNotifications(false);
                   }}>

@@ -28,6 +28,7 @@ import useDependencyStore from '../../store/dependencyStore';
 import useTaskStore from '../../store/taskStore';
 import useAuthStore from '../../store/authStore';
 import { toast } from '../../store/toastStore';
+import { useRealtimeComments } from '../../hooks/useRealtimeSubscription';
 import { format } from 'date-fns';
 import { supabase } from '../../lib/supabase';
 import './TaskDetail.css';
@@ -78,6 +79,52 @@ const TaskDetail = ({ task, onClose, onEdit, members }) => {
 
   const priority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
   const status = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
+
+  // Subscribe to real-time comment changes
+  useRealtimeComments(task.id, {
+    onInsert: (newComment) => {
+      // Update the task with the new comment
+      const updatedTask = {
+        ...task,
+        comments: [
+          ...(task.comments || []),
+          {
+            ...newComment,
+            user: newComment.user || { id: newComment.user_id, full_name: 'Unknown', avatar_url: null }
+          }
+        ]
+      };
+      // Refresh the task in the store
+      useTaskStore.setState((state) => ({
+        tasks: state.tasks.map(t => t.id === task.id ? updatedTask : t),
+        currentTask: task.id === state.currentTask?.id ? updatedTask : state.currentTask
+      }));
+    },
+    onUpdate: (updatedComment) => {
+      // Update the comment in the task
+      const updatedTask = {
+        ...task,
+        comments: (task.comments || []).map(c =>
+          c.id === updatedComment.id ? { ...c, ...updatedComment } : c
+        )
+      };
+      useTaskStore.setState((state) => ({
+        tasks: state.tasks.map(t => t.id === task.id ? updatedTask : t),
+        currentTask: task.id === state.currentTask?.id ? updatedTask : state.currentTask
+      }));
+    },
+    onDelete: (deletedComment) => {
+      // Remove the comment from the task
+      const updatedTask = {
+        ...task,
+        comments: (task.comments || []).filter(c => c.id !== deletedComment.id)
+      };
+      useTaskStore.setState((state) => ({
+        tasks: state.tasks.map(t => t.id === task.id ? updatedTask : t),
+        currentTask: task.id === state.currentTask?.id ? updatedTask : state.currentTask
+      }));
+    }
+  });
 
   // Fetch files when task changes
   useEffect(() => {
