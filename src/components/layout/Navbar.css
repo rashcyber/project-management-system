@@ -228,18 +228,22 @@
 .notification-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 1rem;
   border-bottom: 1px solid var(--border-color);
+  position: relative;
 }
 
 .notification-header h3 {
   font-size: 0.938rem;
   font-weight: 600;
   color: var(--text-primary);
+  margin: 0;
 }
 
 .notification-header-actions {
+  position: absolute;
+  right: 1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;

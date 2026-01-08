@@ -52,6 +52,7 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);
+        setNotificationPage(1); // Reset pagination when closing
       }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setShowUserMenu(false);
@@ -69,22 +70,68 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
 
     const commentParam = notification.comment_id ? `&comment=${notification.comment_id}` : '';
 
-    if (notification.task_id && notification.project_id) {
-      navigate(`/projects/${notification.project_id}/board?task=${notification.task_id}${commentParam}`);
-    } else if (notification.task_id) {
-      const { data: task } = await supabase
-        .from('tasks')
-        .select('project_id')
-        .eq('id', notification.task_id)
-        .single();
+    // Route based on notification type
+    switch (notification.type) {
+      case 'task_assigned':
+      case 'task_updated':
+      case 'task_comment':
+      case 'mention':
+        // Navigate to task with comment if available
+        if (notification.task_id && notification.project_id) {
+          navigate(`/projects/${notification.project_id}/board?task=${notification.task_id}${commentParam}`);
+        } else if (notification.task_id) {
+          const { data: task } = await supabase
+            .from('tasks')
+            .select('project_id')
+            .eq('id', notification.task_id)
+            .single();
 
-      if (task?.project_id) {
-        navigate(`/projects/${task.project_id}/board?task=${notification.task_id}${commentParam}`);
-      } else {
-        navigate('/projects');
-      }
-    } else if (notification.project_id) {
-      navigate(`/projects/${notification.project_id}/board`);
+          if (task?.project_id) {
+            navigate(`/projects/${task.project_id}/board?task=${notification.task_id}${commentParam}`);
+          } else {
+            navigate('/projects');
+          }
+        }
+        break;
+
+      case 'project_invite':
+        // Navigate to project board
+        if (notification.project_id) {
+          navigate(`/projects/${notification.project_id}/board`);
+        } else {
+          navigate('/projects');
+        }
+        break;
+
+      case 'due_reminder':
+        // Navigate to task
+        if (notification.task_id && notification.project_id) {
+          navigate(`/projects/${notification.project_id}/board?task=${notification.task_id}`);
+        } else if (notification.task_id) {
+          const { data: task } = await supabase
+            .from('tasks')
+            .select('project_id')
+            .eq('id', notification.task_id)
+            .single();
+
+          if (task?.project_id) {
+            navigate(`/projects/${task.project_id}/board?task=${notification.task_id}`);
+          } else {
+            navigate('/projects');
+          }
+        }
+        break;
+
+      default:
+        // Default: if has task, go to task; if has project, go to project
+        if (notification.task_id && notification.project_id) {
+          navigate(`/projects/${notification.project_id}/board?task=${notification.task_id}${commentParam}`);
+        } else if (notification.project_id) {
+          navigate(`/projects/${notification.project_id}/board`);
+        } else {
+          navigate('/projects');
+        }
+        break;
     }
 
     setShowNotifications(false);

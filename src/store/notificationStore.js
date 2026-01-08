@@ -147,6 +147,26 @@ const useNotificationStore = create((set, get) => ({
           }));
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          set((state) => {
+            const notif = state.notifications.find(n => n.id === payload.old.id);
+            return {
+              notifications: state.notifications.filter(n => n.id !== payload.old.id),
+              unreadCount: notif && !notif.read
+                ? Math.max(0, state.unreadCount - 1)
+                : state.unreadCount,
+            };
+          });
+        }
+      )
       .subscribe();
 
     return () => {

@@ -8,6 +8,7 @@ const SHORTCUTS = [
   { key: 'k', ctrl: true, description: 'Open search', category: 'Global' },
   { key: 'Escape', description: 'Close modal / Clear selection', category: 'Global' },
   { key: 'p', ctrl: true, description: 'Create new project', category: 'Global' },
+  { key: 'n', ctrl: true, shift: true, description: 'Create new project', category: 'Global' },
   { key: '/', description: 'Focus search in board', category: 'Board' },
   { key: 'b', ctrl: true, description: 'Toggle batch selection mode', category: 'Board' },
   { key: 'Delete', description: 'Delete selected task(s)', category: 'Board', requiresSelection: true },
@@ -74,6 +75,12 @@ const useKeyboardShortcuts = (options = {}) => {
     }
 
     if (isModKey && key === 'p') {
+      e.preventDefault();
+      navigate('/projects/new');
+      return;
+    }
+
+    if (isModKey && shiftKey && key === 'N') {
       e.preventDefault();
       navigate('/projects/new');
       return;
