@@ -62,7 +62,7 @@ const useUserStore = create((set, get) => ({
       // Remove user from project memberships
       await supabase.from('project_members').delete().eq('user_id', userId);
 
-      // Remove user from profiles table
+      // Remove user from profiles table (this triggers ON DELETE CASCADE on auth.users)
       const { error } = await supabase
         .from('profiles')
         .delete()
@@ -75,9 +75,10 @@ const useUserStore = create((set, get) => ({
         loading: false,
       }));
 
-      // Trigger a refresh of current tasks to remove deleted user from assignees
-      // This would need to be coordinated with taskStore
-      window.dispatchEvent(new CustomEvent('userDeleted', { detail: { userId } }));
+      // Immediately notify other stores to refresh their data
+      window.dispatchEvent(new CustomEvent('userDeleted', {
+        detail: { userId, timestamp: Date.now() }
+      }));
 
       return { error: null };
     } catch (error) {
