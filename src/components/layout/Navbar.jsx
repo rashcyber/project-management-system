@@ -67,8 +67,10 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
       await markAsRead(notification.id);
     }
 
+    const commentParam = notification.comment_id ? `&comment=${notification.comment_id}` : '';
+
     if (notification.task_id && notification.project_id) {
-      navigate(`/projects/${notification.project_id}/board?task=${notification.task_id}`);
+      navigate(`/projects/${notification.project_id}/board?task=${notification.task_id}${commentParam}`);
     } else if (notification.task_id) {
       const { data: task } = await supabase
         .from('tasks')
@@ -77,7 +79,7 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
         .single();
 
       if (task?.project_id) {
-        navigate(`/projects/${task.project_id}/board?task=${notification.task_id}`);
+        navigate(`/projects/${task.project_id}/board?task=${notification.task_id}${commentParam}`);
       } else {
         navigate('/projects');
       }

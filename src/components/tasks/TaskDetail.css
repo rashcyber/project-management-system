@@ -743,3 +743,22 @@
     width: 100%;
   }
 }
+
+/* Comment highlighting for deep linking */
+@keyframes highlight-pulse {
+  0% {
+    background-color: var(--primary-light);
+  }
+  50% {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.comment-item.highlight-comment {
+  animation: highlight-pulse 2s ease-in-out;
+  border-left: 3px solid var(--primary);
+  padding-left: calc(0.875rem - 3px);
+}

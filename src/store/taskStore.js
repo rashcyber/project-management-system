@@ -589,6 +589,7 @@ const useTaskStore = create((set, get) => ({
           task_id: taskId,
           project_id: task.project_id,
           actor_id: user.id,
+          comment_id: data.id,
         });
       }
 
@@ -620,6 +621,7 @@ const useTaskStore = create((set, get) => ({
                 task_id: taskId,
                 project_id: task.project_id,
                 actor_id: user.id,
+                comment_id: data.id,
               });
             }
           }

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Calendar,
   Flag,
@@ -48,6 +49,7 @@ const STATUS_CONFIG = {
 };
 
 const TaskDetail = ({ task, onClose, onEdit, members }) => {
+  const [searchParams] = useSearchParams();
   const { profile } = useAuthStore();
   const {
     deleteTask,
@@ -76,6 +78,7 @@ const TaskDetail = ({ task, onClose, onEdit, members }) => {
   const [deletingFileId, setDeletingFileId] = useState(null);
   const [files, setFiles] = useState([]);
   const [fileUrls, setFileUrls] = useState({});
+  const [highlightedCommentId, setHighlightedCommentId] = useState(null);
 
   const priority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
   const status = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
@@ -151,6 +154,25 @@ const TaskDetail = ({ task, onClose, onEdit, members }) => {
     };
     loadFiles();
   }, [task.id]);
+
+  // Handle deep linking to comments
+  useEffect(() => {
+    const commentId = searchParams.get('comment');
+    if (commentId) {
+      // Set the highlighted comment ID
+      setHighlightedCommentId(commentId);
+
+      // Wait for DOM to render, then scroll to the comment
+      setTimeout(() => {
+        const commentElement = document.getElementById(`comment-${commentId}`);
+        if (commentElement) {
+          commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Remove highlight after 3 seconds
+          setTimeout(() => setHighlightedCommentId(null), 3000);
+        }
+      }, 100);
+    }
+  }, [searchParams]);
 
   const handleAddSubtask = async () => {
     if (!newSubtask.trim()) return;
@@ -616,7 +638,10 @@ const TaskDetail = ({ task, onClose, onEdit, members }) => {
           {topLevelComments.map((comment) => (
             <div key={comment.id} className="comment-thread">
               {/* Parent comment */}
-              <div className="comment-item">
+              <div
+                id={`comment-${comment.id}`}
+                className={`comment-item ${highlightedCommentId === comment.id ? 'highlight-comment' : ''}`}
+              >
                 <Avatar
                   src={comment.user?.avatar_url}
                   name={comment.user?.full_name}
@@ -693,7 +718,11 @@ const TaskDetail = ({ task, onClose, onEdit, members }) => {
 
               {/* Replies */}
               {replyMap[comment.id]?.map((reply) => (
-                <div key={reply.id} className="comment-item comment-reply">
+                <div
+                  key={reply.id}
+                  id={`comment-${reply.id}`}
+                  className={`comment-item comment-reply ${highlightedCommentId === reply.id ? 'highlight-comment' : ''}`}
+                >
                   <CornerDownRight size={16} className="reply-indicator" />
                   <Avatar
                     src={reply.user?.avatar_url}
