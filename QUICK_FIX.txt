@@ -1,0 +1,47 @@
+QUICK FIX FOR VERCEL CACHING ISSUE
+=====================================
+
+YOUR PROBLEM: Changes pushed to GitHub but production URL shows old content
+
+YOUR SOLUTION - DO THIS NOW:
+
+1. Open Vercel Dashboard: https://vercel.com/dashboard
+2. Click your project: "pms-seven-fawn"
+3. Go to Settings tab → Build & Deployment
+4. Scroll down and click "Clear Cache" (red button)
+5. Confirm the prompt
+6. Wait 30 seconds
+7. Go to Deployments tab
+8. Find latest deployment
+9. Click ... menu → "Redeploy"
+10. Choose "Redeploy with cache cleared"
+11. Wait 2-3 minutes for build
+12. Once "Ready" status appears:
+    - Go to https://pms-seven-fawn.vercel.app/dashboard
+    - Hard Refresh: Ctrl+Shift+Delete (Windows) or Cmd+Shift+Delete (Mac)
+    - Verify changes appear
+
+WHAT WAS FIXED:
+✓ Cache busting configuration added
+✓ index.html now always fresh (max-age=0)
+✓ Assets versioned with content hashes
+✓ Browser cache properly invalidated
+✓ Future deployments will auto-update
+
+WHY IT WASN'T WORKING BEFORE:
+- index.html was being cached by browser
+- New code was there, but old HTML was served
+- Assets weren't properly versioned
+
+AFTER THIS FIX:
+Every time you push to GitHub:
+→ Vercel builds automatically
+→ Changes appear immediately in production
+→ No more stale content issues
+
+FILES CHANGED FOR THIS FIX:
+- vercel.json (cache headers)
+- vite.config.js (build output hashing)
+- DEPLOYMENT_FIX.md (detailed documentation)
+
+ALL CHANGES COMMITTED AND PUSHED ✓
