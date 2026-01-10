@@ -361,8 +361,8 @@ const Dashboard = () => {
               <h3>Attention: {upcomingDeadlines.overdue.length} Overdue Task{upcomingDeadlines.overdue.length > 1 ? 's' : ''}</h3>
               <p>
                 {upcomingDeadlines.overdue.length === 1
-                  ? `Your task is ${differenceInDays(new Date(), new Date(upcomingDeadlines.overdue[0].due_date))} day${differenceInDays(new Date(), new Date(upcomingDeadlines.overdue[0].due_date)) === 1 ? '' : 's'} overdue`
-                  : 'You have multiple tasks past their due date'}.
+                  ? `"${upcomingDeadlines.overdue[0].title}" is ${differenceInDays(new Date(), new Date(upcomingDeadlines.overdue[0].due_date))} day${differenceInDays(new Date(), new Date(upcomingDeadlines.overdue[0].due_date)) === 1 ? '' : 's'} overdue`
+                  : `${upcomingDeadlines.overdue.map(t => `"${t.title}"`).join(', ')} are overdue`}.
                 Click to view and update them.
               </p>
             </div>
