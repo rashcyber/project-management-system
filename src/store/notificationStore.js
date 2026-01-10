@@ -5,6 +5,7 @@ const useNotificationStore = create((set, get) => ({
   notifications: [],
   unreadCount: 0,
   loading: false,
+  isClearing: false, // Flag to prevent re-fetching during clear operation
 
   // Fetch notifications for current user
   fetchNotifications: async () => {
@@ -111,10 +112,15 @@ const useNotificationStore = create((set, get) => ({
   // Clear all notifications
   clearAll: async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { error: null };
+      set({ isClearing: true }); // Set flag to prevent re-fetching
 
-      // First, delete all notifications for the user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        set({ isClearing: false });
+        return { error: null };
+      }
+
+      // Delete all notifications for the user
       const { error: deleteError } = await supabase
         .from('notifications')
         .delete()
@@ -122,26 +128,22 @@ const useNotificationStore = create((set, get) => ({
 
       if (deleteError) throw deleteError;
 
-      // Clear local state immediately
-      set({ notifications: [], unreadCount: 0 });
+      // Clear local state immediately and completely
+      set({
+        notifications: [],
+        unreadCount: 0,
+      });
 
-      // Verify deletion by refetching (ensures consistency)
-      const { data, error: fetchError } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (fetchError) throw fetchError;
-
-      // If any notifications are still there (shouldn't happen), update state
-      if (data && data.length > 0) {
-        set({ notifications: data, unreadCount: data.filter(n => !n.read).length });
-        return { error: 'Some notifications could not be deleted' };
-      }
+      // Keep the isClearing flag true for 1 second to prevent real-time
+      // DELETE events from interfering with the clear operation
+      setTimeout(() => {
+        set({ isClearing: false });
+      }, 1000);
 
       return { error: null };
     } catch (error) {
       console.error('Error clearing notifications:', error);
+      set({ isClearing: false }); // Clear flag on error
       return { error };
     }
   },
@@ -159,9 +161,15 @@ const useNotificationStore = create((set, get) => ({
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          set((state) => ({
-            notifications: [payload.new, ...state.notifications],
-            unreadCount: state.unreadCount + 1,
+          // Skip INSERT handler if we're in the middle of clearing all notifications
+          const state = get();
+          if (state.isClearing) {
+            return;
+          }
+
+          set((prevState) => ({
+            notifications: [payload.new, ...prevState.notifications],
+            unreadCount: prevState.unreadCount + 1,
           }));
         }
       )
@@ -174,13 +182,20 @@ const useNotificationStore = create((set, get) => ({
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          set((state) => {
-            const notif = state.notifications.find(n => n.id === payload.old.id);
+          // Skip DELETE handler if we're in the middle of clearing all notifications
+          // to prevent interference with the clear operation
+          const state = get();
+          if (state.isClearing) {
+            return;
+          }
+
+          set((prevState) => {
+            const notif = prevState.notifications.find(n => n.id === payload.old.id);
             return {
-              notifications: state.notifications.filter(n => n.id !== payload.old.id),
+              notifications: prevState.notifications.filter(n => n.id !== payload.old.id),
               unreadCount: notif && !notif.read
-                ? Math.max(0, state.unreadCount - 1)
-                : state.unreadCount,
+                ? Math.max(0, prevState.unreadCount - 1)
+                : prevState.unreadCount,
             };
           });
         }
