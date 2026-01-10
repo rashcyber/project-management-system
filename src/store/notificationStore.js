@@ -206,6 +206,146 @@ const useNotificationStore = create((set, get) => ({
       supabase.removeChannel(channel);
     };
   },
+
+  // ============ EMAIL NOTIFICATION PREFERENCES ============
+
+  // Fetch user's email notification preferences
+  fetchEmailPreferences: async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { data: null, error: 'No user' };
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('email_notifications_enabled, email_digest_frequency, email_notification_types')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      return {
+        data: {
+          email_notifications_enabled: data?.email_notifications_enabled ?? true,
+          email_digest_frequency: data?.email_digest_frequency ?? 'daily',
+          email_notification_types: data?.email_notification_types || {
+            task_assigned: true,
+            task_completed: true,
+            task_mentioned: true,
+            project_created: true,
+            comment_mentioned: true,
+          },
+        },
+        error: null
+      };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  // Update email notification preferences
+  updateEmailPreferences: async (preferences) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(preferences)
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  // Toggle email notifications
+  toggleEmailNotifications: async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email_notifications_enabled')
+        .eq('id', user.id)
+        .single();
+
+      const newState = !(profile?.email_notifications_enabled ?? true);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ email_notifications_enabled: newState })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      return { data: { email_notifications_enabled: newState }, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  // Update email digest frequency
+  updateEmailDigestFrequency: async (frequency) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ email_digest_frequency: frequency })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  // Update which notification types trigger emails
+  updateEmailNotificationTypes: async (notificationTypes) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ email_notification_types: notificationTypes })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  // Fetch email logs
+  fetchEmailLogs: async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { data: null, error: 'No user' };
+
+      const { data, error } = await supabase
+        .from('email_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
 }));
 
 export default useNotificationStore;

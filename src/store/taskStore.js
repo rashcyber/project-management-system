@@ -19,6 +19,47 @@ const logActivity = async (action, details, projectId, taskId) => {
   }
 };
 
+// Helper function to determine if a date should generate a recurring instance
+const shouldGenerateInstance = (date, pattern, startDate) => {
+  const dayOfWeek = date.getDay();
+  const dayOfMonth = date.getDate();
+
+  if (pattern.frequency === 'daily') return true;
+
+  if (pattern.frequency === 'weekly') {
+    return pattern.days?.includes(dayOfWeek) || true;
+  }
+
+  if (pattern.frequency === 'monthly') {
+    return dayOfMonth === (pattern.day_of_month || 1);
+  }
+
+  if (pattern.frequency === 'yearly') {
+    const month = date.getMonth();
+    const day = date.getDate();
+    return month === pattern.month && day === pattern.day;
+  }
+
+  return false;
+};
+
+// Helper function to get the next date based on recurrence pattern
+const getNextDate = (currentDate, pattern) => {
+  const nextDate = new Date(currentDate);
+
+  if (pattern.frequency === 'daily') {
+    nextDate.setDate(nextDate.getDate() + (pattern.interval || 1));
+  } else if (pattern.frequency === 'weekly') {
+    nextDate.setDate(nextDate.getDate() + 7);
+  } else if (pattern.frequency === 'monthly') {
+    nextDate.setMonth(nextDate.getMonth() + 1);
+  } else if (pattern.frequency === 'yearly') {
+    nextDate.setFullYear(nextDate.getFullYear() + 1);
+  }
+
+  return nextDate;
+};
+
 const useTaskStore = create((set, get) => ({
   tasks: [],
   currentTask: null,
@@ -827,6 +868,283 @@ const useTaskStore = create((set, get) => ({
       return { error: null };
     } catch (error) {
       return { error };
+    }
+  },
+
+  // ============ TIME TRACKING FUNCTIONS ============
+
+  // Log time entry
+  logTimeEntry: async (taskId, durationMinutes, description) => {
+    set({ loading: true, error: null });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { data, error } = await supabase
+        .from('time_entries')
+        .insert({
+          task_id: taskId,
+          user_id: user.id,
+          duration_minutes: durationMinutes,
+          description,
+          logged_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update task's actual_hours
+      const currentTask = get().tasks.find(t => t.id === taskId);
+      const newActualHours = (currentTask?.actual_hours || 0) + (durationMinutes / 60);
+
+      const { data: updatedTask, error: updateError } = await supabase
+        .from('tasks')
+        .update({ actual_hours: newActualHours })
+        .eq('id', taskId)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      // Update state
+      set((state) => ({
+        tasks: state.tasks.map(t => t.id === taskId ? updatedTask : t),
+        loading: false,
+      }));
+
+      await logActivity('time_logged', {
+        task_title: currentTask?.title,
+        duration_minutes: durationMinutes,
+      }, currentTask?.project_id, taskId);
+
+      return { data, error: null };
+    } catch (error) {
+      set({ error: error.message, loading: false });
+      return { data: null, error };
+    }
+  },
+
+  // Fetch time entries for a task
+  fetchTimeEntries: async (taskId) => {
+    try {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .select(`
+          *,
+          user:profiles(id, full_name, avatar_url)
+        `)
+        .eq('task_id', taskId)
+        .order('logged_at', { ascending: false });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  // Update time estimate
+  updateTimeEstimate: async (taskId, estimatedHours) => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update({ estimated_hours: estimatedHours })
+        .eq('id', taskId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set((state) => ({
+        tasks: state.tasks.map(t => t.id === taskId ? data : t),
+      }));
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  // ============ RECURRING TASKS FUNCTIONS ============
+
+  // Create recurring task
+  createRecurringTask: async (taskData, recurrencePattern) => {
+    set({ loading: true, error: null });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { data: maxPosData } = await supabase
+        .from('tasks')
+        .select('position')
+        .eq('project_id', taskData.project_id)
+        .eq('status', taskData.status || 'not_started')
+        .order('position', { ascending: false })
+        .limit(1);
+
+      const maxPosition = maxPosData?.[0]?.position ?? -1;
+
+      const assignee_ids = taskData.assignee_ids || [];
+      delete taskData.assignee_ids;
+
+      // Create the main recurring task
+      const { data: mainTask, error: mainError } = await supabase
+        .from('tasks')
+        .insert({
+          ...taskData,
+          created_by: user.id,
+          position: maxPosition + 1,
+          recurrence_pattern: recurrencePattern,
+          is_recurring_instance: false,
+        })
+        .select()
+        .single();
+
+      if (mainError) throw mainError;
+
+      // Add assignees
+      if (assignee_ids.length > 0) {
+        const assigneeRecords = assignee_ids.map(userId => ({
+          task_id: mainTask.id,
+          user_id: userId,
+        }));
+        const { error: assigneeError } = await supabase
+          .from('task_assignees')
+          .insert(assigneeRecords);
+        if (assigneeError) throw assigneeError;
+      }
+
+      // Generate initial instances based on recurrence pattern
+      await get().generateRecurringInstances(mainTask.id, recurrencePattern);
+
+      set((state) => ({
+        tasks: [...state.tasks, mainTask],
+        loading: false,
+      }));
+
+      await logActivity('recurring_task_created', {
+        task_title: taskData.title,
+        frequency: recurrencePattern.frequency,
+      }, taskData.project_id, mainTask.id);
+
+      return { data: mainTask, error: null };
+    } catch (error) {
+      set({ error: error.message, loading: false });
+      return { data: null, error };
+    }
+  },
+
+  // Generate recurring task instances
+  generateRecurringInstances: async (originalTaskId, recurrencePattern, upToDate = null) => {
+    try {
+      const { data: originalTask, error: fetchError } = await supabase
+        .from('tasks')
+        .select()
+        .eq('id', originalTaskId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const endDate = upToDate ||
+        (recurrencePattern.end_date ? new Date(recurrencePattern.end_date) :
+          new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000)); // Default 90 days
+
+      const instances = [];
+      let currentDate = new Date(originalTask.due_date || today);
+      currentDate.setHours(0, 0, 0, 0);
+
+      while (currentDate <= endDate) {
+        if (shouldGenerateInstance(currentDate, recurrencePattern, today)) {
+          instances.push({
+            ...originalTask,
+            id: undefined,
+            original_task_id: originalTaskId,
+            is_recurring_instance: true,
+            due_date: currentDate.toISOString().split('T')[0],
+            recurrence_pattern: null,
+            created_at: new Date().toISOString(),
+          });
+        }
+
+        currentDate = getNextDate(currentDate, recurrencePattern);
+      }
+
+      // Batch insert instances
+      if (instances.length > 0) {
+        const { data: createdInstances, error: insertError } = await supabase
+          .from('tasks')
+          .insert(instances)
+          .select();
+
+        if (insertError) throw insertError;
+
+        // Log instances in recurring_task_instances table
+        const instanceRecords = createdInstances.map(instance => ({
+          original_task_id: originalTaskId,
+          generated_task_id: instance.id,
+          due_date: instance.due_date,
+        }));
+
+        await supabase.from('recurring_task_instances').insert(instanceRecords);
+
+        set((state) => ({
+          tasks: [...state.tasks, ...createdInstances],
+        }));
+      }
+
+      return { data: instances, error: null };
+    } catch (error) {
+      console.error('Error generating recurring instances:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Update recurrence pattern
+  updateRecurrencePattern: async (taskId, newPattern) => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update({ recurrence_pattern: newPattern })
+        .eq('id', taskId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set((state) => ({
+        tasks: state.tasks.map(t => t.id === taskId ? data : t),
+      }));
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  // Stop recurring task (prevents new instances)
+  stopRecurringTask: async (taskId) => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update({
+          recurrence_pattern: null,
+          recurrence_end_date: new Date().toISOString().split('T')[0],
+        })
+        .eq('id', taskId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set((state) => ({
+        tasks: state.tasks.map(t => t.id === taskId ? data : t),
+      }));
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
     }
   },
 

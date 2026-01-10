@@ -117,8 +117,9 @@
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: visible;
   transition: all var(--transition-fast);
+  position: relative;
 }
 
 .project-card:hover {
@@ -188,8 +189,8 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  z-index: 10;
-  overflow: hidden;
+  z-index: 100;
+  overflow: visible;
 }
 
 .project-menu button {
