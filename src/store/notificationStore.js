@@ -112,18 +112,36 @@ const useNotificationStore = create((set, get) => ({
   clearAll: async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) return { error: null };
 
-      const { error } = await supabase
+      // First, delete all notifications for the user
+      const { error: deleteError } = await supabase
         .from('notifications')
         .delete()
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
+      // Clear local state immediately
       set({ notifications: [], unreadCount: 0 });
+
+      // Verify deletion by refetching (ensures consistency)
+      const { data, error: fetchError } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (fetchError) throw fetchError;
+
+      // If any notifications are still there (shouldn't happen), update state
+      if (data && data.length > 0) {
+        set({ notifications: data, unreadCount: data.filter(n => !n.read).length });
+        return { error: 'Some notifications could not be deleted' };
+      }
+
       return { error: null };
     } catch (error) {
+      console.error('Error clearing notifications:', error);
       return { error };
     }
   },

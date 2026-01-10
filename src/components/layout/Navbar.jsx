@@ -219,7 +219,10 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
                     </button>
                   )}
                   {notifications.length > 0 && (
-                    <button className="clear-all-btn" onClick={clearAll}>
+                    <button className="clear-all-btn" onClick={async () => {
+                      await clearAll();
+                      setNotificationPage(1); // Reset pagination after clearing
+                    }}>
                       Clear all
                     </button>
                   )}
