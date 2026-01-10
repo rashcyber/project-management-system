@@ -52,6 +52,54 @@ const COLUMNS = [
   { id: 'completed', title: 'Completed', color: '#22c55e' },
 ];
 
+// Error Boundary component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('TaskDetail error:', error, errorInfo);
+    if (this.props.onError) {
+      this.props.onError();
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444' }}>
+          <p>Error loading task details</p>
+          <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+            {this.state.error?.message || 'Unknown error'}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            style={{
+              marginTop: '1rem',
+              padding: '0.5rem 1rem',
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const ProjectBoard = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -632,18 +680,24 @@ const ProjectBoard = () => {
         isOpen={showTaskDetail}
         onClose={handleTaskDetailClose}
         title="Task Details"
-        size="large"
+        size="xlarge"
       >
-        {getSelectedTask() && (
-          <TaskDetail
-            task={getSelectedTask()}
-            onClose={handleTaskDetailClose}
-            onEdit={() => {
-              setShowTaskDetail(false);
-              setShowTaskForm(true);
-            }}
-            members={currentProject.project_members || []}
-          />
+        {getSelectedTask() ? (
+          <ErrorBoundary onError={handleTaskDetailClose}>
+            <TaskDetail
+              task={getSelectedTask()}
+              onClose={handleTaskDetailClose}
+              onEdit={() => {
+                setShowTaskDetail(false);
+                setShowTaskForm(true);
+              }}
+              members={currentProject.project_members || []}
+            />
+          </ErrorBoundary>
+        ) : (
+          <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+            <p>Loading task details...</p>
+          </div>
         )}
       </Modal>
 
