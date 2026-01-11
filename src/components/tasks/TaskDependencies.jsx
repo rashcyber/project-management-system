@@ -116,10 +116,12 @@ const TaskDependencies = ({ task, projectId, members }) => {
         </Button>
       </div>
 
-      {currentlyBlocked && (
+      {currentlyBlocked && blockedTasks.length > 0 && (
         <div className="dependency-warning">
           <AlertCircle size={16} />
-          <span>This task is blocked by other tasks</span>
+          <span>
+            This task is blocked by: {blockedTasks.map(t => t?.title).filter(Boolean).join(', ')}
+          </span>
         </div>
       )}
 

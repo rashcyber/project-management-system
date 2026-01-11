@@ -15,12 +15,16 @@
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 1.5rem;
   flex-shrink: 0;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .board-header-left {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .board-header .back-btn {
@@ -87,9 +91,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
-  min-width: fit-content;
+  flex-shrink: 0;
+  min-width: auto;
 }
 
 .board-search {
