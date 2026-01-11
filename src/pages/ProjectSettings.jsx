@@ -9,8 +9,10 @@ import {
   FolderKanban,
   Palette,
   AlertTriangle,
+  Bell,
 } from 'lucide-react';
 import { Button, Input, Modal, Loading } from '../components/common';
+import EmailNotificationSettings from '../components/EmailNotificationSettings';
 import useProjectStore from '../store/projectStore';
 import useAuthStore from '../store/authStore';
 import useActivityStore from '../store/activityStore';
@@ -38,6 +40,7 @@ const ProjectSettings = () => {
   const [saving, setSaving] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [activeTab, setActiveTab] = useState('general');
 
   useEffect(() => {
     if (projectId) {
@@ -151,9 +154,19 @@ const ProjectSettings = () => {
       <div className="settings-content">
         {/* Navigation */}
         <div className="settings-nav">
-          <button className="nav-item active">
+          <button
+            className={`nav-item ${activeTab === 'general' ? 'active' : ''}`}
+            onClick={() => setActiveTab('general')}
+          >
             <Settings size={18} />
             General
+          </button>
+          <button
+            className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`}
+            onClick={() => setActiveTab('notifications')}
+          >
+            <Bell size={18} />
+            Notifications
           </button>
           <button
             className="nav-item"
@@ -166,7 +179,8 @@ const ProjectSettings = () => {
 
         {/* Settings Form */}
         <div className="settings-main">
-          <form onSubmit={handleSave}>
+          {activeTab === 'general' && (
+            <form onSubmit={handleSave}>
             <div className="settings-section">
               <div className="section-header">
                 <FolderKanban size={20} />
@@ -246,36 +260,41 @@ const ProjectSettings = () => {
                 </Button>
               </div>
             )}
-          </form>
 
-          {/* Danger Zone */}
-          {canDeleteProject() && (
-            <div className="settings-section danger-zone">
-              <div className="section-header">
-                <AlertTriangle size={20} />
-                <div>
-                  <h2>Danger Zone</h2>
-                  <p>Irreversible and destructive actions</p>
-                </div>
-              </div>
+              {/* Danger Zone */}
+              {canDeleteProject() && (
+                <div className="settings-section danger-zone">
+                  <div className="section-header">
+                    <AlertTriangle size={20} />
+                    <div>
+                      <h2>Danger Zone</h2>
+                      <p>Irreversible and destructive actions</p>
+                    </div>
+                  </div>
 
-              <div className="danger-action">
-                <div className="danger-info">
-                  <h3>Delete this project</h3>
-                  <p>
-                    Once you delete a project, there is no going back. All tasks, comments,
-                    and data associated with this project will be permanently removed.
-                  </p>
+                  <div className="danger-action">
+                    <div className="danger-info">
+                      <h3>Delete this project</h3>
+                      <p>
+                        Once you delete a project, there is no going back. All tasks, comments,
+                        and data associated with this project will be permanently removed.
+                      </p>
+                    </div>
+                    <Button
+                      variant="danger"
+                      icon={<Trash2 size={18} />}
+                      onClick={() => setShowDeleteModal(true)}
+                    >
+                      Delete Project
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  variant="danger"
-                  icon={<Trash2 size={18} />}
-                  onClick={() => setShowDeleteModal(true)}
-                >
-                  Delete Project
-                </Button>
-              </div>
-            </div>
+              )}
+            </form>
+          )}
+
+          {activeTab === 'notifications' && (
+            <EmailNotificationSettings projectId={projectId} />
           )}
         </div>
       </div>

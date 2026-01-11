@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Calendar, Flag, User, X, Check, Search } from 'lucide-react';
-import { Button, Input, Avatar } from '../common';
+import { Calendar, Flag, User, X, Check, Search, Repeat2 } from 'lucide-react';
+import { Button, Input, Avatar, Modal } from '../common';
+import RecurrenceSettings from '../RecurrenceSettings';
 import useTaskStore from '../../store/taskStore';
 import { toast } from '../../store/toastStore';
 import './TaskForm.css';
@@ -26,6 +27,8 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
   const [errors, setErrors] = useState({});
   const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
   const [assigneeSearch, setAssigneeSearch] = useState('');
+  const [showRecurrenceModal, setShowRecurrenceModal] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState(null);
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -283,6 +286,22 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
         </div>
       </div>
 
+      {/* Recurrence Section */}
+      <div className="form-group">
+        <label className="form-label">
+          <Repeat2 size={14} />
+          Recurrence
+        </label>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setShowRecurrenceModal(true)}
+          className="recurrence-button"
+        >
+          {recurrencePattern ? `Recurring: ${recurrencePattern.frequency}` : 'Set Recurrence...'}
+        </Button>
+      </div>
+
       <div className="form-actions">
         <Button type="button" variant="secondary" onClick={onClose}>
           Cancel
@@ -291,6 +310,23 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
           {task ? 'Update Task' : 'Create Task'}
         </Button>
       </div>
+
+      {/* Recurrence Settings Modal */}
+      <Modal
+        isOpen={showRecurrenceModal}
+        onClose={() => setShowRecurrenceModal(false)}
+        title="Set Recurrence"
+        size="small"
+      >
+        <RecurrenceSettings
+          recurrencePattern={recurrencePattern}
+          onSave={(pattern) => {
+            setRecurrencePattern(pattern);
+            setShowRecurrenceModal(false);
+          }}
+          onCancel={() => setShowRecurrenceModal(false)}
+        />
+      </Modal>
     </form>
   );
 };

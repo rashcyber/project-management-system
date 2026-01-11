@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Button, Modal, Avatar, Input, MentionInput, Loading } from '../common';
 import TaskDependencies from './TaskDependencies';
+import TimeTracker from '../TimeTracker';
 import useDependencyStore from '../../store/dependencyStore';
 import useTaskStore from '../../store/taskStore';
 import useAuthStore from '../../store/authStore';
@@ -963,6 +964,9 @@ const TaskDetail = ({ task, onClose, onEdit, members }) => {
           </div>
         )}
       </div>
+
+      {/* Time Tracking */}
+      <TimeTracker task={task} />
 
       {/* Task Dependencies */}
       <TaskDependencies
