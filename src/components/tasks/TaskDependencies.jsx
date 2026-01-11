@@ -7,6 +7,11 @@ import { toast } from '../../store/toastStore';
 import './TaskDependencies.css';
 
 const TaskDependencies = ({ task, projectId, members }) => {
+  // Safety checks for required props
+  if (!task || !task.id) {
+    return null;
+  }
+
   const { dependencies, fetchDependencies, addDependency, removeDependency, getBlockingTasks, getBlockedTasks, isTaskBlocked } = useDependencyStore();
   const { tasks } = useTaskStore();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -14,14 +19,16 @@ const TaskDependencies = ({ task, projectId, members }) => {
   const [dependencyType, setDependencyType] = useState('blocks'); // 'blocks' or 'blocked_by'
 
   useEffect(() => {
-    if (projectId) {
-      fetchDependencies(projectId);
+    if (projectId && task?.id) {
+      fetchDependencies(projectId).catch(error => {
+        console.error('Error fetching dependencies:', error);
+      });
     }
-  }, [projectId, fetchDependencies]);
+  }, [projectId, task?.id, fetchDependencies]);
 
-  const blockingTasks = getBlockingTasks(task.id);
-  const blockedTasks = getBlockedTasks(task.id);
-  const currentlyBlocked = isTaskBlocked(task.id);
+  const blockingTasks = task?.id ? (getBlockingTasks(task.id) || []) : [];
+  const blockedTasks = task?.id ? (getBlockedTasks(task.id) || []) : [];
+  const currentlyBlocked = task?.id ? isTaskBlocked(task.id) : false;
 
   const availableTasks = tasks.filter(t =>
     t.id !== task.id &&
@@ -58,30 +65,39 @@ const TaskDependencies = ({ task, projectId, members }) => {
     }
   };
 
-  const renderTaskItem = (depTask, dependency) => (
-    <div key={dependency.id || depTask.id} className="dependency-item">
-      <div className="dependency-task-info">
-        <div className={`task-status-indicator status-${depTask.status}`}>
-          {depTask.status === 'completed' ? (
-            <CheckCircle size={14} />
-          ) : (
-            <AlertCircle size={14} />
-          )}
+  const renderTaskItem = (depTask, dependency) => {
+    // Safety check - ensure both depTask and dependency exist
+    if (!depTask || !dependency) {
+      return null;
+    }
+
+    return (
+      <div key={dependency?.id || depTask?.id} className="dependency-item">
+        <div className="dependency-task-info">
+          <div className={`task-status-indicator status-${depTask?.status}`}>
+            {depTask?.status === 'completed' ? (
+              <CheckCircle size={14} />
+            ) : (
+              <AlertCircle size={14} />
+            )}
+          </div>
+          <div className="dependency-task-details">
+            <span className="dependency-task-title">{depTask?.title || 'Unknown Task'}</span>
+            <span className="dependency-task-status">
+              {depTask?.status ? depTask.status.replace('_', ' ') : 'unknown'}
+            </span>
+          </div>
         </div>
-        <div className="dependency-task-details">
-          <span className="dependency-task-title">{depTask.title}</span>
-          <span className="dependency-task-status">{depTask.status.replace('_', ' ')}</span>
-        </div>
+        <button
+          className="dependency-remove-btn"
+          onClick={() => dependency?.id && handleRemoveDependency(dependency.id)}
+          title="Remove dependency"
+        >
+          <X size={14} />
+        </button>
       </div>
-      <button
-        className="dependency-remove-btn"
-        onClick={() => handleRemoveDependency(dependency.id)}
-        title="Remove dependency"
-      >
-        <X size={14} />
-      </button>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="task-dependencies">
@@ -114,18 +130,28 @@ const TaskDependencies = ({ task, projectId, members }) => {
           {blockingTasks.length > 0 && (
             <div className="dependency-section">
               <h4>This task blocks:</h4>
-              {blockingTasks.map((depTask) =>
-                renderTaskItem(depTask, dependencies.find(d => d.blocking_task_id === task.id && d.blocked_task_id === depTask.id))
-              )}
+              {blockingTasks
+                .filter(depTask => depTask) // Filter out undefined tasks
+                .map((depTask) => {
+                  const dep = dependencies.find(d => d.blocking_task_id === task.id && d.blocked_task_id === depTask.id);
+                  return renderTaskItem(depTask, dep);
+                })
+                .filter(item => item !== null) // Filter out null returns
+              }
             </div>
           )}
 
           {blockedTasks.length > 0 && (
             <div className="dependency-section">
               <h4>Blocked by:</h4>
-              {blockedTasks.map((depTask) =>
-                renderTaskItem(depTask, dependencies.find(d => d.blocked_task_id === task.id && d.blocking_task_id === depTask.id))
-              )}
+              {blockedTasks
+                .filter(depTask => depTask) // Filter out undefined tasks
+                .map((depTask) => {
+                  const dep = dependencies.find(d => d.blocked_task_id === task.id && d.blocking_task_id === depTask.id);
+                  return renderTaskItem(depTask, dep);
+                })
+                .filter(item => item !== null) // Filter out null returns
+              }
             </div>
           )}
         </div>
