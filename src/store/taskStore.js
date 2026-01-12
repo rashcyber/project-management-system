@@ -943,6 +943,40 @@ const useTaskStore = create((set, get) => ({
     }
   },
 
+  // Delete time entry
+  deleteTimeEntry: async (taskId, entryId, durationMinutes) => {
+    try {
+      const { error } = await supabase
+        .from('time_entries')
+        .delete()
+        .eq('id', entryId);
+
+      if (error) throw error;
+
+      // Update task's actual_hours by subtracting the deleted entry's duration
+      const currentTask = get().tasks.find(t => t.id === taskId);
+      const newActualHours = Math.max(0, (currentTask?.actual_hours || 0) - (durationMinutes / 60));
+
+      const { data: updatedTask, error: updateError } = await supabase
+        .from('tasks')
+        .update({ actual_hours: newActualHours })
+        .eq('id', taskId)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      // Update state
+      set((state) => ({
+        tasks: state.tasks.map(t => t.id === taskId ? updatedTask : t),
+      }));
+
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  },
+
   // Update time estimate
   updateTimeEstimate: async (taskId, estimatedHours) => {
     try {

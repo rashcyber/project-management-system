@@ -10,8 +10,9 @@ export function TimeTracker({ taskId, currentTask }) {
   const [loading, setLoading] = useState(false);
   const [timeEntries, setTimeEntries] = useState([]);
   const [showEntries, setShowEntries] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
-  const { logTimeEntry, fetchTimeEntries } = useTaskStore();
+  const { logTimeEntry, fetchTimeEntries, deleteTimeEntry } = useTaskStore();
 
   const handleLogTime = async (e) => {
     e.preventDefault();
@@ -49,6 +50,27 @@ export function TimeTracker({ taskId, currentTask }) {
       await loadTimeEntries();
     }
     setShowEntries(!showEntries);
+  };
+
+  const handleDeleteEntry = async (entryId, durationMinutes) => {
+    if (!window.confirm('Are you sure you want to delete this time entry?')) {
+      return;
+    }
+
+    setDeletingId(entryId);
+    try {
+      const result = await deleteTimeEntry(taskId, entryId, durationMinutes);
+      if (result.error) {
+        throw result.error;
+      }
+      // Refresh entries
+      await loadTimeEntries();
+    } catch (error) {
+      console.error('Error deleting time entry:', error);
+      alert('Failed to delete time entry');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const hours = currentTask?.actual_hours || 0;
@@ -180,9 +202,10 @@ export function TimeTracker({ taskId, currentTask }) {
                 <button
                   className="time-entry-delete"
                   title="Delete entry"
-                  onClick={() => console.log('Delete entry')}
+                  onClick={() => handleDeleteEntry(entry.id, entry.duration_minutes)}
+                  disabled={deletingId === entry.id}
                 >
-                  <Trash2 size={16} />
+                  {deletingId === entry.id ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
                 </button>
               </div>
             ))}

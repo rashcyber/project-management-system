@@ -324,7 +324,7 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
             setRecurrencePattern(pattern);
             setShowRecurrenceModal(false);
           }}
-          onCancel={() => setShowRecurrenceModal(false)}
+          onClose={() => setShowRecurrenceModal(false)}
         />
       </Modal>
     </form>
