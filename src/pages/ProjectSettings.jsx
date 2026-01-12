@@ -12,7 +12,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { Button, Input, Modal, Loading } from '../components/common';
-import EmailNotificationSettings from '../components/EmailNotificationSettings';
+import { EmailNotificationSettings } from '../components/EmailNotificationSettings';
 import useProjectStore from '../store/projectStore';
 import useAuthStore from '../store/authStore';
 import useActivityStore from '../store/activityStore';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Calendar, Flag, User, X, Check, Search, Repeat2 } from 'lucide-react';
 import { Button, Input, Avatar, Modal } from '../common';
-import RecurrenceSettings from '../RecurrenceSettings';
+import { RecurrenceSettings } from '../RecurrenceSettings';
 import useTaskStore from '../../store/taskStore';
 import { toast } from '../../store/toastStore';
 import './TaskForm.css';

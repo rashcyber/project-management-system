@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Repeat2, X } from 'lucide-react';
 
-export function RecurrenceSettings({ isOpen, onClose, onSave, initialPattern = null }) {
+export function RecurrenceSettings({ onClose, onSave, recurrencePattern = null }) {
   const [frequency, setFrequency] = useState('weekly');
   const [interval, setInterval] = useState(1);
   const [days, setDays] = useState([1, 3, 5]); // Mon, Wed, Fri
@@ -9,14 +9,14 @@ export function RecurrenceSettings({ isOpen, onClose, onSave, initialPattern = n
   const [dayOfMonth, setDayOfMonth] = useState(1);
 
   useEffect(() => {
-    if (initialPattern) {
-      setFrequency(initialPattern.frequency || 'weekly');
-      setInterval(initialPattern.interval || 1);
-      setDays(initialPattern.days || [1, 3, 5]);
-      setEndDate(initialPattern.end_date || '');
-      setDayOfMonth(initialPattern.day_of_month || 1);
+    if (recurrencePattern) {
+      setFrequency(recurrencePattern.frequency || 'weekly');
+      setInterval(recurrencePattern.interval || 1);
+      setDays(recurrencePattern.days || [1, 3, 5]);
+      setEndDate(recurrencePattern.end_date || '');
+      setDayOfMonth(recurrencePattern.day_of_month || 1);
     }
-  }, [initialPattern, isOpen]);
+  }, [recurrencePattern]);
 
   const handleDayToggle = (dayIndex) => {
     setDays((prevDays) =>
@@ -40,25 +40,8 @@ export function RecurrenceSettings({ isOpen, onClose, onSave, initialPattern = n
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <Repeat2 size={20} className="text-blue-600" />
-            <h2 className="text-lg font-bold text-gray-800">Recurrence Settings</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X size={20} className="text-gray-600" />
-          </button>
-        </div>
-
-        <div className="p-4 space-y-4">
+    <div className="space-y-4">
           {/* Frequency */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -169,10 +152,9 @@ export function RecurrenceSettings({ isOpen, onClose, onSave, initialPattern = n
               {endDate && ` until ${new Date(endDate).toLocaleDateString()}`}
             </p>
           </div>
-        </div>
 
         {/* Actions */}
-        <div className="flex gap-2 p-4 border-t border-gray-200">
+        <div className="flex gap-2 pt-4">
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
@@ -186,7 +168,6 @@ export function RecurrenceSettings({ isOpen, onClose, onSave, initialPattern = n
             Save Pattern
           </button>
         </div>
-      </div>
     </div>
   );
 }
