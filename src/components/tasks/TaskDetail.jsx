@@ -966,7 +966,7 @@ const TaskDetail = ({ task, onClose, onEdit, members }) => {
       </div>
 
       {/* Time Tracking */}
-      <TimeTracker task={task} />
+      <TimeTracker taskId={task?.id} currentTask={task} />
 
       {/* Task Dependencies */}
       <TaskDependencies
