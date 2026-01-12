@@ -53,6 +53,8 @@ const TaskDependencies = ({ task, projectId, members }) => {
       toast.success('Dependency added');
       setShowAddModal(false);
       setSelectedBlockingTask('');
+      // Refresh dependencies
+      await fetchDependencies(task.project_id);
     }
   };
 
@@ -62,6 +64,8 @@ const TaskDependencies = ({ task, projectId, members }) => {
       toast.error('Failed to remove dependency');
     } else {
       toast.success('Dependency removed');
+      // Refresh dependencies
+      await fetchDependencies(task.project_id);
     }
   };
 

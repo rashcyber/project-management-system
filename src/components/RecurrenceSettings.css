@@ -1,0 +1,180 @@
+.recurrence-settings {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.recurrence-settings .space-y-4 > div {
+  margin-bottom: 1.5rem;
+}
+
+.recurrence-settings .space-y-4 > div:last-child {
+  margin-bottom: 0;
+}
+
+.recurrence-settings label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+.recurrence-settings select,
+.recurrence-settings input[type="number"],
+.recurrence-settings input[type="date"] {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  background-color: #f8fafc;
+  transition: all 0.2s ease;
+}
+
+.recurrence-settings select:hover,
+.recurrence-settings input[type="number"]:hover,
+.recurrence-settings input[type="date"]:hover {
+  border-color: #94a3b8;
+  background-color: white;
+}
+
+.recurrence-settings select:focus,
+.recurrence-settings input[type="number"]:focus,
+.recurrence-settings input[type="date"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background-color: white;
+}
+
+/* Day selector buttons */
+.recurrence-settings .day-selector {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+}
+
+.recurrence-settings .day-btn {
+  padding: 0.625rem 0.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  border: 1px solid #cbd5e1;
+  background-color: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recurrence-settings .day-btn:hover {
+  background-color: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.recurrence-settings .day-btn.active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Preview section */
+.recurrence-settings .preview-box {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+}
+
+.recurrence-settings .preview-box p {
+  font-size: 0.875rem;
+  color: #0369a1;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.recurrence-settings .preview-box .preview-label {
+  font-weight: 700;
+  color: #0c4a6e;
+}
+
+/* Helper text */
+.recurrence-settings .helper-text {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.5rem;
+}
+
+/* Actions */
+.recurrence-settings .recurrence-actions {
+  display: flex;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 1.5rem;
+}
+
+.recurrence-settings .recurrence-actions button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.recurrence-settings .recurrence-actions .cancel-btn {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.recurrence-settings .recurrence-actions .cancel-btn:hover {
+  background-color: #e2e8f0;
+  color: #334155;
+}
+
+.recurrence-settings .recurrence-actions .save-btn {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.recurrence-settings .recurrence-actions .save-btn:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+.recurrence-settings .recurrence-actions .save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .recurrence-settings {
+    padding: 1rem;
+  }
+
+  .recurrence-settings .day-selector {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.25rem;
+  }
+
+  .recurrence-settings .day-btn {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.7rem;
+  }
+
+  .recurrence-settings .recurrence-actions {
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+}

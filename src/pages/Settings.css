@@ -348,4 +348,48 @@
   .rules-grid {
     grid-template-columns: 1fr;
   }
+
+  .notification-settings-container {
+    flex-direction: column;
+  }
+}
+
+/* Notification Settings Container */
+.notification-settings-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.in-app-notifications-section {
+  padding: 1.5rem;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.in-app-notifications-section .section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--primary);
+}
+
+.email-notifications-section {
+  margin-top: 1rem;
+}
+
+/* Override EmailNotificationSettings styles to fit container */
+.email-notifications-section .bg-white {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+.email-notifications-section > div {
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
 }

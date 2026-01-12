@@ -1,0 +1,280 @@
+.email-notification-settings {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.email-notification-settings .header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.email-notification-settings .header svg {
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.email-notification-settings h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+/* Success message */
+.email-notification-settings .success-message {
+  margin-bottom: 1.5rem;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border: 1px solid #86efac;
+  border-radius: 8px;
+}
+
+.email-notification-settings .success-message p {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #15803d;
+  margin: 0;
+}
+
+/* Settings content */
+.email-notification-settings .settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Toggle section */
+.email-notification-settings .toggle-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.email-notification-settings .toggle-section:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.email-notification-settings .toggle-info h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.25rem 0;
+}
+
+.email-notification-settings .toggle-info p {
+  font-size: 0.825rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Toggle switch */
+.email-notification-settings .toggle-switch {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.email-notification-settings .toggle-switch.active {
+  background-color: #3b82f6;
+}
+
+.email-notification-settings .toggle-switch::after {
+  content: '';
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  margin-left: 0.25rem;
+}
+
+.email-notification-settings .toggle-switch.active::after {
+  transform: translateX(1.25rem);
+}
+
+/* Frequency section */
+.email-notification-settings .frequency-section {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.email-notification-settings .frequency-section h3,
+.email-notification-settings .notification-types-section h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 1rem 0;
+}
+
+.email-notification-settings .frequency-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.email-notification-settings .frequency-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.email-notification-settings .frequency-option:hover {
+  border-color: #94a3b8;
+  background-color: #f8fafc;
+}
+
+.email-notification-settings .frequency-option input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #3b82f6;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.email-notification-settings .frequency-option-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.email-notification-settings .frequency-option-label .label-text {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.875rem;
+}
+
+.email-notification-settings .frequency-option-label .label-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Notification types section */
+.email-notification-settings .notification-types-section {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.email-notification-settings .notification-types {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.email-notification-settings .notification-type {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.email-notification-settings .notification-type:hover {
+  border-color: #94a3b8;
+  background-color: #f8fafc;
+}
+
+.email-notification-settings .notification-type input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #3b82f6;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.email-notification-settings .notification-type-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.email-notification-settings .notification-type-label .label-text {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.875rem;
+}
+
+.email-notification-settings .notification-type-label .label-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Info box */
+.email-notification-settings .info-box {
+  padding: 1rem;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+}
+
+.email-notification-settings .info-box p {
+  font-size: 0.825rem;
+  color: #0369a1;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.email-notification-settings .info-box .info-label {
+  font-weight: 700;
+  color: #0c4a6e;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .email-notification-settings {
+    padding: 1rem;
+  }
+
+  .email-notification-settings .toggle-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .email-notification-settings .toggle-switch {
+    margin-top: 0.75rem;
+  }
+
+  .email-notification-settings .frequency-options,
+  .email-notification-settings .notification-types {
+    gap: 0.5rem;
+  }
+
+  .email-notification-settings .frequency-option,
+  .email-notification-settings .notification-type {
+    padding: 0.75rem;
+  }
+}

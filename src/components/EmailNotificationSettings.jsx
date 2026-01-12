@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Loader } from 'lucide-react';
 import useNotificationStore from '../store/notificationStore';
+import './EmailNotificationSettings.css';
 
 export function EmailNotificationSettings() {
   const [loading, setLoading] = useState(false);
@@ -98,39 +99,43 @@ export function EmailNotificationSettings() {
 
   if (loading && !preferences) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader className="animate-spin text-blue-600" size={24} />
+      <div className="email-notification-settings">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <Loader className="animate-spin" size={24} style={{ color: '#3b82f6' }} />
+        </div>
       </div>
     );
   }
 
   if (!preferences) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-600">Failed to load email preferences</p>
+      <div className="email-notification-settings">
+        <div style={{ padding: '1rem', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+          <p style={{ color: '#991b1b', margin: 0 }}>Failed to load email preferences</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Mail className="text-blue-600" size={24} />
-        <h2 className="text-xl font-bold text-gray-800">Email Notifications</h2>
+    <div className="email-notification-settings">
+      <div className="header">
+        <Mail size={24} />
+        <h2>Email Notifications</h2>
       </div>
 
       {saved && (
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-green-700 text-sm font-medium">Preferences saved successfully</p>
+        <div className="success-message">
+          <p>Preferences saved successfully</p>
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="settings-content">
         {/* Enable/Disable Email Notifications */}
-        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-          <div>
-            <h3 className="font-semibold text-gray-800">Email Notifications</h3>
-            <p className="text-sm text-gray-600">
+        <div className="toggle-section">
+          <div className="toggle-info">
+            <h3>Email Notifications</h3>
+            <p>
               {preferences.email_notifications_enabled
                 ? 'You are receiving email notifications'
                 : 'Email notifications are disabled'}
@@ -139,33 +144,23 @@ export function EmailNotificationSettings() {
           <button
             onClick={handleToggleEmailNotifications}
             disabled={loading}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              preferences.email_notifications_enabled
-                ? 'bg-blue-600'
-                : 'bg-gray-300'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                preferences.email_notifications_enabled ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
+            className={`toggle-switch ${preferences.email_notifications_enabled ? 'active' : ''}`}
+          />
         </div>
 
         {/* Digest Frequency */}
         {preferences.email_notifications_enabled && (
           <>
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-3">Email Frequency</h3>
-              <div className="space-y-2">
+            <div className="frequency-section">
+              <h3>Email Frequency</h3>
+              <div className="frequency-options">
                 {[
                   { value: 'real-time', label: 'Real-time', description: 'Get notified immediately' },
                   { value: 'daily', label: 'Daily Digest', description: 'One email per day' },
                   { value: 'weekly', label: 'Weekly Digest', description: 'One email per week' },
                   { value: 'never', label: 'Never', description: 'Only in-app notifications' },
                 ].map((option) => (
-                  <label key={option.value} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <label key={option.value} className="frequency-option">
                     <input
                       type="radio"
                       name="frequency"
@@ -173,11 +168,10 @@ export function EmailNotificationSettings() {
                       checked={preferences.email_digest_frequency === option.value}
                       onChange={(e) => handleFrequencyChange(e.target.value)}
                       disabled={loading}
-                      className="w-4 h-4 text-blue-600"
                     />
-                    <div>
-                      <div className="font-medium text-gray-800">{option.label}</div>
-                      <div className="text-sm text-gray-600">{option.description}</div>
+                    <div className="frequency-option-label">
+                      <span className="label-text">{option.label}</span>
+                      <span className="label-desc">{option.description}</span>
                     </div>
                   </label>
                 ))}
@@ -185,9 +179,9 @@ export function EmailNotificationSettings() {
             </div>
 
             {/* Notification Types */}
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-3">Email Me When...</h3>
-              <div className="space-y-2">
+            <div className="notification-types-section">
+              <h3>Email Me When...</h3>
+              <div className="notification-types">
                 {[
                   {
                     key: 'task_assigned',
@@ -215,17 +209,16 @@ export function EmailNotificationSettings() {
                     description: 'Someone mentions me in a comment',
                   },
                 ].map((type) => (
-                  <label key={type.key} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <label key={type.key} className="notification-type">
                     <input
                       type="checkbox"
                       checked={preferences.email_notification_types[type.key] ?? true}
                       onChange={() => handleNotificationTypeChange(type.key)}
                       disabled={loading}
-                      className="w-4 h-4 text-blue-600 rounded"
                     />
-                    <div>
-                      <div className="font-medium text-gray-800">{type.label}</div>
-                      <div className="text-sm text-gray-600">{type.description}</div>
+                    <div className="notification-type-label">
+                      <span className="label-text">{type.label}</span>
+                      <span className="label-desc">{type.description}</span>
                     </div>
                   </label>
                 ))}
@@ -235,9 +228,9 @@ export function EmailNotificationSettings() {
         )}
 
         {/* Info Box */}
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <span className="font-semibold">Note:</span> Your email preferences are synced across all your devices. You can change these settings at any time.
+        <div className="info-box">
+          <p>
+            <span className="info-label">Note:</span> Your email preferences are synced across all your devices. You can change these settings at any time.
           </p>
         </div>
       </div>

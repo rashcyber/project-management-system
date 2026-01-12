@@ -10,6 +10,7 @@ import {
   Check,
 } from 'lucide-react';
 import { Button, Avatar } from '../components/common';
+import EmailNotificationSettings from '../components/EmailNotificationSettings';
 import useAuthStore from '../store/authStore';
 import { toast } from '../store/toastStore';
 import { supabase } from '../lib/supabase';
@@ -366,74 +367,83 @@ const Settings = () => {
             <p>Choose what notifications you want to receive</p>
           </div>
 
-          <div className="card-body">
-            <div className="notification-list">
-              <label className="notification-item">
-                <div className="notification-info">
-                  <h4>Task Assignments</h4>
-                  <p>Get notified when you're assigned to a task</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={notifications.taskAssignments}
-                  onChange={() => handleNotificationChange('taskAssignments')}
-                />
-              </label>
+          <div className="card-body notification-settings-container">
+            {/* In-App Notifications */}
+            <div className="in-app-notifications-section">
+              <h3 className="section-title">In-App Notifications</h3>
+              <div className="notification-list">
+                <label className="notification-item">
+                  <div className="notification-info">
+                    <h4>Task Assignments</h4>
+                    <p>Get notified when you're assigned to a task</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.taskAssignments}
+                    onChange={() => handleNotificationChange('taskAssignments')}
+                  />
+                </label>
 
-              <label className="notification-item">
-                <div className="notification-info">
-                  <h4>Task Updates</h4>
-                  <p>Get notified when tasks you're involved with are updated</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={notifications.taskUpdates}
-                  onChange={() => handleNotificationChange('taskUpdates')}
-                />
-              </label>
+                <label className="notification-item">
+                  <div className="notification-info">
+                    <h4>Task Updates</h4>
+                    <p>Get notified when tasks you're involved with are updated</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.taskUpdates}
+                    onChange={() => handleNotificationChange('taskUpdates')}
+                  />
+                </label>
 
-              <label className="notification-item">
-                <div className="notification-info">
-                  <h4>Comments</h4>
-                  <p>Get notified when someone comments on your tasks</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={notifications.comments}
-                  onChange={() => handleNotificationChange('comments')}
-                />
-              </label>
+                <label className="notification-item">
+                  <div className="notification-info">
+                    <h4>Comments</h4>
+                    <p>Get notified when someone comments on your tasks</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.comments}
+                    onChange={() => handleNotificationChange('comments')}
+                  />
+                </label>
 
-              <label className="notification-item">
-                <div className="notification-info">
-                  <h4>Due Date Reminders</h4>
-                  <p>Get reminded before task deadlines</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={notifications.dueDateReminders}
-                  onChange={() => handleNotificationChange('dueDateReminders')}
-                />
-              </label>
+                <label className="notification-item">
+                  <div className="notification-info">
+                    <h4>Due Date Reminders</h4>
+                    <p>Get reminded before task deadlines</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.dueDateReminders}
+                    onChange={() => handleNotificationChange('dueDateReminders')}
+                  />
+                </label>
 
-              <label className="notification-item">
-                <div className="notification-info">
-                  <h4>Project Invites</h4>
-                  <p>Get notified when you're added to a project</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={notifications.projectInvites}
-                  onChange={() => handleNotificationChange('projectInvites')}
-                />
-              </label>
+                <label className="notification-item">
+                  <div className="notification-info">
+                    <h4>Project Invites</h4>
+                    <p>Get notified when you're added to a project</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.projectInvites}
+                    onChange={() => handleNotificationChange('projectInvites')}
+                  />
+                </label>
+              </div>
+
+              <div className="form-actions">
+                <Button variant="primary" onClick={handleNotificationSubmit}>
+                  <Save size={18} />
+                  Save In-App Preferences
+                </Button>
+              </div>
             </div>
 
-            <div className="form-actions">
-              <Button variant="primary" onClick={handleNotificationSubmit}>
-                <Save size={18} />
-                Save Preferences
-              </Button>
+            {/* Email Notifications */}
+            <div className="email-notifications-section">
+              <EmailNotificationSettings />
             </div>
           </div>
         </div>

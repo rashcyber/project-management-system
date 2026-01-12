@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Clock, Plus, Trash2, Loader } from 'lucide-react';
+import { Clock, Plus, Trash2, Loader, ChevronDown } from 'lucide-react';
 import useTaskStore from '../store/taskStore';
+import './TimeTracker.css';
 
 export function TimeTracker({ taskId, currentTask }) {
   const [showForm, setShowForm] = useState(false);
@@ -56,48 +57,47 @@ export function TimeTracker({ taskId, currentTask }) {
   const percentage = estimated ? Math.round((hours / estimated) * 100) : 0;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mt-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Clock size={18} className="text-blue-600" />
-          <h3 className="font-semibold text-gray-800">Time Tracking</h3>
+    <div className="time-tracker">
+      <div className="time-tracker-header">
+        <div className="time-tracker-title">
+          <Clock size={20} />
+          <h3>Time Tracking</h3>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="time-tracker-btn"
+          title="Add time entry"
         >
-          <Plus size={18} className="text-gray-600" />
+          <Plus size={20} />
         </button>
       </div>
 
       {/* Time Summary */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bg-blue-50 p-3 rounded-lg">
-          <div className="text-xs text-gray-600 font-medium">Estimated</div>
-          <div className="text-lg font-bold text-blue-600">{estimated.toFixed(1)}h</div>
+      <div className="time-summary">
+        <div className="time-summary-item estimated">
+          <div className="time-summary-label">Estimated</div>
+          <div className="time-summary-value">{estimated.toFixed(1)}h</div>
         </div>
-        <div className="bg-green-50 p-3 rounded-lg">
-          <div className="text-xs text-gray-600 font-medium">Actual</div>
-          <div className="text-lg font-bold text-green-600">{hours.toFixed(1)}h</div>
+        <div className="time-summary-item actual">
+          <div className="time-summary-label">Actual</div>
+          <div className="time-summary-value">{hours.toFixed(1)}h</div>
         </div>
-        <div className="bg-orange-50 p-3 rounded-lg">
-          <div className="text-xs text-gray-600 font-medium">Remaining</div>
-          <div className="text-lg font-bold text-orange-600">{hoursLeft.toFixed(1)}h</div>
+        <div className="time-summary-item remaining">
+          <div className="time-summary-label">Remaining</div>
+          <div className="time-summary-value">{hoursLeft.toFixed(1)}h</div>
         </div>
       </div>
 
       {/* Progress Bar */}
       {estimated > 0 && (
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-700">Progress</span>
-            <span className="text-sm font-bold text-gray-600">{percentage}%</span>
+        <div className="progress-section">
+          <div className="progress-header">
+            <span className="progress-label">Progress</span>
+            <span className="progress-percentage">{percentage}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div className="progress-bar-container">
             <div
-              className={`h-full transition-all duration-300 ${
-                percentage <= 100 ? 'bg-blue-500' : 'bg-green-500'
-              }`}
+              className={`progress-bar-fill ${percentage > 100 ? 'complete' : ''}`}
               style={{ width: `${Math.min(percentage, 100)}%` }}
             />
           </div>
@@ -106,98 +106,95 @@ export function TimeTracker({ taskId, currentTask }) {
 
       {/* Log Time Form */}
       {showForm && (
-        <form onSubmit={handleLogTime} className="space-y-3 p-3 bg-gray-50 rounded-lg mb-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Duration (minutes)
-            </label>
+        <form onSubmit={handleLogTime} className="time-log-form">
+          <div className="form-group">
+            <label className="form-label">Duration (minutes)</label>
             <input
               type="number"
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
               min="1"
               max="480"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="form-input"
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description (optional)
-            </label>
+          <div className="form-group">
+            <label className="form-label">Description (optional)</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What did you work on?"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="form-input"
             />
           </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
-            >
-              {loading ? <Loader size={16} className="animate-spin" /> : <Plus size={16} />}
-              Log Time
-            </button>
+          <div className="form-actions">
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+              className="form-btn form-btn-cancel"
             >
               Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="form-btn form-btn-submit"
+            >
+              {loading ? <Loader size={16} className="animate-spin" /> : <Plus size={16} />}
+              Log Time
             </button>
           </div>
         </form>
       )}
 
       {/* Time Entries List */}
-      <button
-        onClick={handleShowEntries}
-        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-      >
-        {showEntries ? 'Hide' : 'Show'} Time Entries ({timeEntries.length})
-      </button>
+      <div className="time-entries">
+        <button
+          onClick={handleShowEntries}
+          className="time-entries-header"
+        >
+          <ChevronDown size={16} style={{ transform: showEntries ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+          <span>Time Entries ({timeEntries.length})</span>
+        </button>
 
-      {showEntries && timeEntries.length > 0 && (
-        <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
-          {timeEntries.map((entry) => (
-            <div
-              key={entry.id}
-              className="flex items-start gap-3 p-2 bg-gray-50 rounded-lg border border-gray-200"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-800">
+        {showEntries && timeEntries.length > 0 && (
+          <div>
+            {timeEntries.map((entry) => (
+              <div key={entry.id} className="time-entry-item">
+                <div className="time-entry-info">
+                  <div className="time-entry-duration">
                     {(entry.duration_minutes / 60).toFixed(1)}h
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    by {entry.user?.full_name || 'Unknown'}
-                  </span>
+                    <span style={{ marginLeft: '0.5rem', fontSize: '0.825rem', color: '#94a3b8' }}>
+                      by {entry.user?.full_name || 'Unknown'}
+                    </span>
+                  </div>
+                  {entry.description && (
+                    <div className="time-entry-description">{entry.description}</div>
+                  )}
+                  <div className="time-entry-description" style={{ marginTop: '0.5rem' }}>
+                    {new Date(entry.logged_at).toLocaleDateString()}
+                  </div>
                 </div>
-                {entry.description && (
-                  <p className="text-sm text-gray-600">{entry.description}</p>
-                )}
-                <div className="text-xs text-gray-500">
-                  {new Date(entry.logged_at).toLocaleDateString()}
-                </div>
+                <button
+                  className="time-entry-delete"
+                  title="Delete entry"
+                  onClick={() => console.log('Delete entry')}
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
-              <button
-                className="p-1 hover:bg-red-100 rounded text-red-600 transition-colors"
-                title="Delete entry"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {showEntries && timeEntries.length === 0 && (
-        <p className="text-sm text-gray-500 mt-2">No time entries yet</p>
-      )}
+        {showEntries && timeEntries.length === 0 && (
+          <div className="empty-state">
+            No time entries yet. Click the + button to add one.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
