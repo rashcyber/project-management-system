@@ -59,49 +59,22 @@ const TaskDependencies = ({ task, projectId, members }) => {
   };
 
   const handleRemoveDependency = async (dependencyId) => {
-    const { error } = await removeDependency(dependencyId);
-    if (error) {
-      toast.error('Failed to remove dependency');
-    } else {
-      toast.success('Dependency removed');
-      // Refresh dependencies
-      await fetchDependencies(task.project_id);
+    try {
+      const { error } = await removeDependency(dependencyId);
+      if (error) {
+        console.error('Remove dependency error:', error);
+        toast.error('Failed to remove dependency');
+      } else {
+        toast.success('Dependency removed');
+        // Refresh dependencies
+        await fetchDependencies(task.project_id);
+      }
+    } catch (error) {
+      console.error('Error removing dependency:', error);
+      toast.error('Error removing dependency');
     }
   };
 
-  const renderTaskItem = (depTask, dependency) => {
-    // Safety check - ensure both depTask and dependency exist
-    if (!depTask || !dependency) {
-      return null;
-    }
-
-    return (
-      <div key={dependency?.id || depTask?.id} className="dependency-item">
-        <div className="dependency-task-info">
-          <div className={`task-status-indicator status-${depTask?.status}`}>
-            {depTask?.status === 'completed' ? (
-              <CheckCircle size={14} />
-            ) : (
-              <AlertCircle size={14} />
-            )}
-          </div>
-          <div className="dependency-task-details">
-            <span className="dependency-task-title">{depTask?.title || 'Unknown Task'}</span>
-            <span className="dependency-task-status">
-              {depTask?.status ? depTask.status.replace('_', ' ') : 'unknown'}
-            </span>
-          </div>
-        </div>
-        <button
-          className="dependency-remove-btn"
-          onClick={() => dependency?.id && handleRemoveDependency(dependency.id)}
-          title="Remove dependency"
-        >
-          <X size={14} />
-        </button>
-      </div>
-    );
-  };
 
   return (
     <div className="task-dependencies">
@@ -140,9 +113,35 @@ const TaskDependencies = ({ task, projectId, members }) => {
                 .filter(depTask => depTask) // Filter out undefined tasks
                 .map((depTask) => {
                   const dep = dependencies.find(d => d.blocking_task_id === task.id && d.blocked_task_id === depTask.id);
-                  return renderTaskItem(depTask, dep);
+                  if (!depTask || !dep) return null;
+                  return (
+                    <div key={dep.id} className="dependency-item">
+                      <div className="dependency-task-info">
+                        <div className={`task-status-indicator status-${depTask.status}`}>
+                          {depTask.status === 'completed' ? (
+                            <CheckCircle size={14} />
+                          ) : (
+                            <AlertCircle size={14} />
+                          )}
+                        </div>
+                        <div className="dependency-task-details">
+                          <span className="dependency-task-title">{depTask.title || 'Unknown Task'}</span>
+                          <span className="dependency-task-status">
+                            {depTask.status ? depTask.status.replace('_', ' ') : 'unknown'}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        className="dependency-remove-btn"
+                        onClick={() => handleRemoveDependency(dep.id)}
+                        title="Remove dependency"
+                        type="button"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
                 })
-                .filter(item => item !== null) // Filter out null returns
               }
             </div>
           )}
@@ -154,9 +153,35 @@ const TaskDependencies = ({ task, projectId, members }) => {
                 .filter(depTask => depTask) // Filter out undefined tasks
                 .map((depTask) => {
                   const dep = dependencies.find(d => d.blocked_task_id === task.id && d.blocking_task_id === depTask.id);
-                  return renderTaskItem(depTask, dep);
+                  if (!depTask || !dep) return null;
+                  return (
+                    <div key={dep.id} className="dependency-item">
+                      <div className="dependency-task-info">
+                        <div className={`task-status-indicator status-${depTask.status}`}>
+                          {depTask.status === 'completed' ? (
+                            <CheckCircle size={14} />
+                          ) : (
+                            <AlertCircle size={14} />
+                          )}
+                        </div>
+                        <div className="dependency-task-details">
+                          <span className="dependency-task-title">{depTask.title || 'Unknown Task'}</span>
+                          <span className="dependency-task-status">
+                            {depTask.status ? depTask.status.replace('_', ' ') : 'unknown'}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        className="dependency-remove-btn"
+                        onClick={() => handleRemoveDependency(dep.id)}
+                        title="Remove dependency"
+                        type="button"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
                 })
-                .filter(item => item !== null) // Filter out null returns
               }
             </div>
           )}
