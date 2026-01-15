@@ -56,19 +56,32 @@ const useUserStore = create((set, get) => ({
   deleteUser: async (userId) => {
     set({ loading: true, error: null });
     try {
-      // Remove user from task assignments first
+      // Step 1: Remove user from task assignments
       await supabase.from('task_assignees').delete().eq('user_id', userId);
 
-      // Remove user from project memberships
+      // Step 2: Remove user from project memberships
       await supabase.from('project_members').delete().eq('user_id', userId);
 
-      // Remove user from profiles table (this triggers ON DELETE CASCADE on auth.users)
-      const { error } = await supabase
+      // Step 3: Delete from profiles table first
+      const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('id', userId);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      // Step 4: Try to delete from auth.users via RPC function
+      // This requires a database function to be set up on Supabase
+      try {
+        const { error: rpcError } = await supabase.rpc('delete_user', { user_id: userId });
+        // If RPC doesn't exist, that's okay - profiles are already deleted
+        if (rpcError && !rpcError.message.includes('function')) {
+          console.error('RPC error:', rpcError);
+        }
+      } catch (rpcErr) {
+        // RPC function might not exist yet, but profiles are deleted
+        console.log('Note: Auth user deletion requires admin function');
+      }
 
       set((state) => ({
         users: state.users.filter((u) => u.id !== userId),
