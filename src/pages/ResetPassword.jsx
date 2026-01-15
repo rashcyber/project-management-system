@@ -22,15 +22,13 @@ const ResetPassword = () => {
   useEffect(() => {
     // Check if we have a valid recovery session
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-
       // Check URL for recovery token (Supabase adds this)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const type = hashParams.get('type');
 
       if (type === 'recovery' && accessToken) {
-        // Set the session with the recovery token
+        // Set the session with the recovery token (temporary, only for this page)
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: hashParams.get('refresh_token') || '',
@@ -39,8 +37,6 @@ const ResetPassword = () => {
         if (!error) {
           setIsValidSession(true);
         }
-      } else if (session) {
-        setIsValidSession(true);
       }
 
       setIsCheckingSession(false);
@@ -95,7 +91,12 @@ const ResetPassword = () => {
       toast.success('Password set successfully! You can now log in.');
 
       // Sign out and redirect to login
+      // This clears the temporary recovery session
       await supabase.auth.signOut();
+
+      // Clear the URL hash to prevent token reuse
+      window.history.replaceState({}, document.title, window.location.pathname);
+
       navigate('/login');
     } catch (error) {
       toast.error(error.message || 'Failed to set password');
