@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import useAuthStore from './authStore';
+import useOfflineStore from './offlineStore';
+import { executeOfflineQuery, getOfflineMessage, CACHE_KEYS } from '../lib/offlineSupabase';
+import { getCachedData, cacheData } from '../lib/offlineCache';
 
 const useProjectStore = create((set, get) => ({
   projects: [],
@@ -11,12 +14,23 @@ const useProjectStore = create((set, get) => ({
 
   setCurrentProject: (project) => set({ currentProject: project }),
 
-  // Fetch all projects for current user with role-based filtering
+  // Fetch all projects for current user with role-based filtering and offline support
   fetchProjects: async () => {
     set({ loading: true, error: null });
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const { profile } = useAuthStore.getState();
+      const isOnline = useOfflineStore.getState().isOnline;
+
+      // Check cache first if offline
+      if (!isOnline) {
+        const cached = getCachedData(CACHE_KEYS.PROJECTS);
+        if (cached) {
+          console.log('[OFFLINE] Using cached projects');
+          set({ projects: cached.data || [], loading: false });
+          return { data: cached.data, error: null, fromCache: true };
+        }
+      }
 
       let query = supabase
         .from('projects')
@@ -47,9 +61,24 @@ const useProjectStore = create((set, get) => ({
 
       if (error) throw error;
 
+      // Cache the projects
+      if (data) {
+        cacheData(CACHE_KEYS.PROJECTS, data);
+      }
+
       set({ projects: data || [], loading: false });
       return { data, error: null };
     } catch (error) {
+      // If offline and no cache, return friendly error
+      const isOnline = useOfflineStore.getState().isOnline;
+      if (!isOnline) {
+        const cached = getCachedData(CACHE_KEYS.PROJECTS);
+        if (cached) {
+          set({ projects: cached.data || [], loading: false });
+          return { data: cached.data, error: null, fromCache: true };
+        }
+      }
+
       set({ error: error.message, loading: false });
       return { data: null, error };
     }
