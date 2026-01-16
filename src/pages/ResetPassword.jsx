@@ -28,6 +28,10 @@ const ResetPassword = () => {
       const type = hashParams.get('type');
 
       if (type === 'recovery' && accessToken) {
+        // SECURITY: Clear any existing session first to prevent session hijacking
+        // This ensures we're working with a clean slate on the reset page
+        await supabase.auth.signOut({ scope: 'local' });
+
         // Set the session with the recovery token (temporary, only for this page)
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
@@ -90,12 +94,15 @@ const ResetPassword = () => {
 
       toast.success('Password set successfully! You can now log in.');
 
-      // Sign out and redirect to login
-      // This clears the temporary recovery session
-      await supabase.auth.signOut();
+      // SECURITY: Complete session cleanup to prevent session hijacking
+      // 1. Sign out from all scopes to clear browser storage
+      await supabase.auth.signOut({ scope: 'global' });
 
-      // Clear the URL hash to prevent token reuse
+      // 2. Clear the URL hash to prevent token reuse
       window.history.replaceState({}, document.title, window.location.pathname);
+
+      // 3. Add a small delay to ensure session is cleared before navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       navigate('/login');
     } catch (error) {

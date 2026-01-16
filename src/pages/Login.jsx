@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { Button, Input } from '../components/common';
 import useAuthStore from '../store/authStore';
+import { supabase } from '../lib/supabase';
 import { toast } from '../store/toastStore';
 import './Auth.css';
 
@@ -17,6 +18,23 @@ const Login = () => {
 
   const { signIn } = useAuthStore();
   const navigate = useNavigate();
+
+  // SECURITY: Clear any existing session on login page mount to prevent session hijacking
+  useEffect(() => {
+    const clearSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        // If there's an active session, clear it (user should log in fresh)
+        if (session) {
+          await supabase.auth.signOut({ scope: 'local' });
+        }
+      } catch (error) {
+        console.error('Error clearing session:', error);
+      }
+    };
+
+    clearSession();
+  }, []);
 
   const validateForm = () => {
     const newErrors = {};
