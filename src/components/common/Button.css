@@ -94,6 +94,24 @@
   width: 100%;
 }
 
+/* Mobile touch-friendly improvements */
+@media (max-width: 768px) {
+  .btn-small {
+    min-height: 36px;
+    padding: 0.5rem 0.875rem;
+  }
+
+  .btn-medium {
+    min-height: 40px;
+    padding: 0.625rem 1rem;
+  }
+
+  .btn-large {
+    min-height: 44px;
+    padding: 0.75rem 1.25rem;
+  }
+}
+
 /* Icon */
 .btn-icon {
   display: flex;

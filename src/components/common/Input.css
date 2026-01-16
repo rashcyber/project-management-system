@@ -76,6 +76,32 @@ textarea.input {
   resize: vertical;
 }
 
+/* Mobile improvements */
+@media (max-width: 768px) {
+  .input {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  .input-with-icon {
+    padding-left: 2.75rem;
+  }
+
+  textarea.input {
+    min-height: 120px;
+    font-size: 1rem;
+  }
+
+  .input-label {
+    font-size: 0.938rem;
+  }
+
+  .input-error-text {
+    font-size: 0.813rem;
+  }
+}
+
 /* Select styling */
 select.input {
   cursor: pointer;
