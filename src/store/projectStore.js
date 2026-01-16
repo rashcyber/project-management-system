@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import useAuthStore from './authStore';
 
 const useProjectStore = create((set, get) => ({
   projects: [],
@@ -10,11 +11,14 @@ const useProjectStore = create((set, get) => ({
 
   setCurrentProject: (project) => set({ currentProject: project }),
 
-  // Fetch all projects for current user
+  // Fetch all projects for current user with role-based filtering
   fetchProjects: async () => {
     set({ loading: true, error: null });
     try {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      const { profile } = useAuthStore.getState();
+
+      let query = supabase
         .from('projects')
         .select(`
           *,
@@ -28,6 +32,19 @@ const useProjectStore = create((set, get) => ({
         `)
         .order('created_at', { ascending: false });
 
+      // SECURITY: Apply role-based project filtering for multi-team isolation
+      if (profile?.role === 'super_admin') {
+        // Super Admin: See ALL projects (for system oversight)
+      } else if (profile?.role === 'admin') {
+        // Admin: Projects they own OR are members of
+        query = query.or(`owner_id.eq.${user.id},project_members.user_id.eq.${user.id}`);
+      } else {
+        // Member/Manager: ONLY projects they're members of
+        query = query.filter('project_members.user_id', 'eq', user.id);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
 
       set({ projects: data || [], loading: false });
@@ -38,11 +55,14 @@ const useProjectStore = create((set, get) => ({
     }
   },
 
-  // Fetch single project by ID
+  // Fetch single project by ID with access control
   fetchProject: async (projectId) => {
     set({ loading: true, error: null });
     try {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      const { profile } = useAuthStore.getState();
+
+      let query = supabase
         .from('projects')
         .select(`
           *,
@@ -54,8 +74,20 @@ const useProjectStore = create((set, get) => ({
             user:profiles(id, full_name, email, avatar_url)
           )
         `)
-        .eq('id', projectId)
-        .single();
+        .eq('id', projectId);
+
+      // SECURITY: Apply role-based access control for single project
+      if (profile?.role !== 'super_admin') {
+        if (profile?.role === 'admin') {
+          // Admin: Can access projects they own OR are members of
+          query = query.or(`owner_id.eq.${user.id},project_members.user_id.eq.${user.id}`);
+        } else {
+          // Member/Manager: Can only access projects they're members of
+          query = query.filter('project_members.user_id', 'eq', user.id);
+        }
+      }
+
+      const { data, error } = await query.single();
 
       if (error) throw error;
 
