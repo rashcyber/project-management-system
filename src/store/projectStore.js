@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import useAuthStore from './authStore';
 import useOfflineStore from './offlineStore';
-import { executeOfflineQuery, getOfflineMessage, CACHE_KEYS } from '../lib/offlineSupabase';
-import { getCachedData, cacheData } from '../lib/offlineCache';
+import { executeOfflineQuery, getOfflineMessage } from '../lib/offlineSupabase';
+import { getCachedData, cacheData, CACHE_KEYS } from '../lib/offlineCache';
 
 const useProjectStore = create((set, get) => ({
   projects: [],
