@@ -1,0 +1,137 @@
+.offline-indicator {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 40;
+  animation: slideDown 0.3s ease-out;
+  box-shadow: var(--shadow-sm);
+}
+
+.offline-indicator.offline {
+  background-color: #fef3c7;
+  border-bottom-color: #f59e0b;
+}
+
+.offline-indicator.online {
+  background-color: #ecfdf5;
+  border-bottom-color: #10b981;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.offline-indicator-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.offline-indicator-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.offline-indicator.offline .offline-indicator-icon {
+  color: #f59e0b;
+}
+
+.offline-indicator.online .offline-indicator-icon {
+  color: #10b981;
+}
+
+.offline-indicator-icon .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.offline-indicator-text {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  flex: 1;
+}
+
+.offline-indicator.offline .offline-indicator-text {
+  color: #92400e;
+}
+
+.offline-indicator.online .offline-indicator-text {
+  color: #065f46;
+}
+
+.offline-indicator-text.error {
+  color: #7f1d1d;
+}
+
+.offline-indicator-text .error {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.offline-indicator-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  transition: width 0.3s ease;
+}
+
+.offline-indicator.online .progress-bar {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .offline-indicator {
+    top: 64px;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .offline-indicator-content {
+    gap: 0.5rem;
+  }
+
+  .offline-indicator-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .offline-indicator-text {
+    font-size: 0.813rem;
+  }
+}

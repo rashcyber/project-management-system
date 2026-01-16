@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import OfflineIndicator from '../OfflineIndicator';
 import { Loading } from '../common';
 import ToastContainer from '../common/ToastContainer';
 import GlobalSearch from '../common/GlobalSearch';
 import useAuthStore from '../../store/authStore';
 import useNotificationStore from '../../store/notificationStore';
 import { supabase } from '../../lib/supabase';
+import { initializeOfflineDetection } from '../../lib/offline';
 import './Layout.css';
 
 const Layout = () => {
@@ -27,6 +29,12 @@ const Layout = () => {
       initialize();
     }
   }, [initialized, initialize]);
+
+  // OFFLINE: Initialize offline detection on mount
+  useEffect(() => {
+    const cleanup = initializeOfflineDetection();
+    return cleanup;
+  }, []);
 
   // SECURITY: Monitor for unauthorized session changes (session hijacking detection)
   useEffect(() => {
@@ -107,6 +115,8 @@ const Layout = () => {
 
   return (
     <div className="app-layout">
+      <OfflineIndicator />
+
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={handleSidebarToggle}
