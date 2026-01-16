@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import useOfflineStore from './offlineStore';
+import { getCachedData, cacheData, CACHE_KEYS } from '../lib/offlineCache';
 
 // Helper function to log activity
 const logActivity = async (action, details, projectId, taskId) => {
@@ -73,6 +75,18 @@ const useTaskStore = create((set, get) => ({
   fetchTasks: async (projectId) => {
     set({ loading: true, error: null });
     try {
+      const isOnline = useOfflineStore.getState().isOnline;
+
+      // Check cache first if offline
+      if (!isOnline) {
+        const cachedTasks = getCachedData(CACHE_KEYS.TASKS);
+        if (cachedTasks?.projectId === projectId && cachedTasks?.data) {
+          console.log('[OFFLINE] Using cached tasks');
+          set({ tasks: cachedTasks.data || [], loading: false });
+          return { data: cachedTasks.data, error: null, fromCache: true };
+        }
+      }
+
       const { data, error } = await supabase
         .from('tasks')
         .select(`
@@ -95,6 +109,11 @@ const useTaskStore = create((set, get) => ({
         assignee_id: task.task_assignees?.[0]?.user_id || null, // Keep for compatibility
         assignee: task.task_assignees?.[0]?.user || null
       })) || [];
+
+      // Cache the tasks
+      if (transformedData) {
+        cacheData(CACHE_KEYS.TASKS, { data: transformedData, projectId });
+      }
 
       set({ tasks: transformedData, loading: false });
       return { data: transformedData, error: null };
@@ -421,6 +440,40 @@ const useTaskStore = create((set, get) => ({
   // Add subtask
   addSubtask: async (taskId, title, assignedTo = null) => {
     try {
+      const isOnline = useOfflineStore.getState().isOnline;
+
+      if (!isOnline) {
+        // When offline, queue the action
+        const { data: { user } } = await supabase.auth.getUser();
+        useOfflineStore.getState().queueAction({
+          type: 'addSubtask',
+          payload: { taskId, title, assignedTo },
+          timestamp: Date.now(),
+        });
+
+        // Create optimistic subtask for UI
+        const optimisticSubtask = {
+          id: `offline_${Date.now()}`,
+          task_id: taskId,
+          title,
+          assigned_to: assignedTo,
+          position: (get().tasks.find(t => t.id === taskId)?.subtasks?.length || 0),
+          completed: false,
+          assignee: null,
+          synced: false,
+        };
+
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === taskId
+              ? { ...t, subtasks: [...(t.subtasks || []), optimisticSubtask] }
+              : t
+          ),
+        }));
+
+        return { data: optimisticSubtask, error: null, offline: true };
+      }
+
       const { data: maxPosData } = await supabase
         .from('subtasks')
         .select('position')

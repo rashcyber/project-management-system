@@ -1,4 +1,5 @@
 import useOfflineStore from '../store/offlineStore';
+import { supabase } from './supabase';
 
 /**
  * Offline Service
@@ -117,21 +118,84 @@ export const syncPendingActions = async () => {
  * @param {object} action - The pending action to process
  */
 const processPendingAction = async (action) => {
-  // This is a placeholder - actual implementation would dispatch to appropriate handlers
-  // For now, we'll just log that it would be processed
-  console.log(`Processing action: ${action.type}`, action.payload);
+  console.log(`Processing offline action: ${action.type}`, action.payload);
 
-  // In a real implementation, you would call the appropriate API endpoint
-  // based on action.type and pass action.payload
-  // Example:
-  // if (action.type === 'create_task') {
-  //   await createTask(action.payload);
-  // } else if (action.type === 'update_task') {
-  //   await updateTask(action.payload);
-  // }
+  switch (action.type) {
+    case 'addSubtask': {
+      const { taskId, title, assignedTo } = action.payload;
 
-  // For now, just simulate success
-  return Promise.resolve();
+      // Get max position
+      const { data: maxPosData } = await supabase
+        .from('subtasks')
+        .select('position')
+        .eq('task_id', taskId)
+        .order('position', { ascending: false })
+        .limit(1);
+
+      const maxPosition = maxPosData?.[0]?.position ?? -1;
+
+      // Insert subtask
+      const { data, error } = await supabase
+        .from('subtasks')
+        .insert({
+          task_id: taskId,
+          title,
+          position: maxPosition + 1,
+          assigned_to: assignedTo,
+        })
+        .select(`
+          *,
+          assignee:profiles!subtasks_assigned_to_fkey(id, full_name, email, avatar_url)
+        `)
+        .single();
+
+      if (error) throw error;
+      return { data };
+    }
+
+    case 'toggleSubtask': {
+      const { subtaskId, completed } = action.payload;
+      const { data, error } = await supabase
+        .from('subtasks')
+        .update({ completed })
+        .eq('id', subtaskId)
+        .select(`
+          *,
+          assignee:profiles!subtasks_assigned_to_fkey(id, full_name, email, avatar_url)
+        `)
+        .single();
+
+      if (error) throw error;
+      return { data };
+    }
+
+    case 'updateTask': {
+      const { taskId, updates } = action.payload;
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(updates)
+        .eq('id', taskId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data };
+    }
+
+    case 'deleteTask': {
+      const { taskId } = action.payload;
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+
+      if (error) throw error;
+      return {};
+    }
+
+    default:
+      throw new Error(`Unknown action type: ${action.type}`);
+  }
 };
 
 /**

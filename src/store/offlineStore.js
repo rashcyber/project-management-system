@@ -14,12 +14,11 @@ const useOfflineStore = create(
       setOnline: (isOnline) => set({ isOnline }),
 
       // Queue an action for later sync
-      queueAction: (type, payload) => {
+      queueAction: (actionData) => {
         const action = {
           id: `${Date.now()}-${Math.random()}`,
-          type,
-          payload,
-          timestamp: new Date().toISOString(),
+          ...actionData,
+          timestamp: actionData.timestamp || new Date().toISOString(),
           retries: 0,
         };
 

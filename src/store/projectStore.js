@@ -47,27 +47,36 @@ const useProjectStore = create((set, get) => ({
         .order('created_at', { ascending: false });
 
       // SECURITY: Apply role-based project filtering for multi-team isolation
-      if (profile?.role === 'super_admin') {
-        // Super Admin: See ALL projects (for system oversight)
-      } else if (profile?.role === 'admin') {
-        // Admin: Projects they own OR are members of
-        query = query.or(`owner_id.eq.${user.id},project_members.user_id.eq.${user.id}`);
-      } else {
-        // Member/Manager: ONLY projects they're members of
-        query = query.filter('project_members.user_id', 'eq', user.id);
-      }
-
-      const { data, error } = await query;
+      let { data, error } = await query;
 
       if (error) throw error;
 
-      // Cache the projects
-      if (data) {
-        cacheData(CACHE_KEYS.PROJECTS, data);
+      // Filter projects based on role (client-side since Supabase filtering on nested tables is complex)
+      let filteredProjects = data || [];
+
+      if (profile?.role === 'super_admin') {
+        // Super Admin: See ALL projects
+        filteredProjects = data || [];
+      } else if (profile?.role === 'admin') {
+        // Admin: Projects they own OR are members of
+        filteredProjects = (data || []).filter(project =>
+          project.owner_id === user.id ||
+          project.project_members?.some(member => member.user_id === user.id)
+        );
+      } else {
+        // Member/Manager: ONLY projects they're members of
+        filteredProjects = (data || []).filter(project =>
+          project.project_members?.some(member => member.user_id === user.id)
+        );
       }
 
-      set({ projects: data || [], loading: false });
-      return { data, error: null };
+      // Cache the projects
+      if (filteredProjects) {
+        cacheData(CACHE_KEYS.PROJECTS, filteredProjects);
+      }
+
+      set({ projects: filteredProjects || [], loading: false });
+      return { data: filteredProjects, error: null };
     } catch (error) {
       // If offline and no cache, return friendly error
       const isOnline = useOfflineStore.getState().isOnline;
@@ -91,7 +100,7 @@ const useProjectStore = create((set, get) => ({
       const { data: { user } } = await supabase.auth.getUser();
       const { profile } = useAuthStore.getState();
 
-      let query = supabase
+      const query = supabase
         .from('projects')
         .select(`
           *,
@@ -105,20 +114,21 @@ const useProjectStore = create((set, get) => ({
         `)
         .eq('id', projectId);
 
-      // SECURITY: Apply role-based access control for single project
-      if (profile?.role !== 'super_admin') {
-        if (profile?.role === 'admin') {
-          // Admin: Can access projects they own OR are members of
-          query = query.or(`owner_id.eq.${user.id},project_members.user_id.eq.${user.id}`);
-        } else {
-          // Member/Manager: Can only access projects they're members of
-          query = query.filter('project_members.user_id', 'eq', user.id);
-        }
-      }
-
       const { data, error } = await query.single();
 
       if (error) throw error;
+
+      // SECURITY: Verify access control for single project (client-side)
+      if (profile?.role !== 'super_admin') {
+        const hasAccess =
+          profile?.role === 'admin' &&
+          (data.owner_id === user.id || data.project_members?.some(m => m.user_id === user.id)) ||
+          (profile?.role !== 'admin' && data.project_members?.some(m => m.user_id === user.id));
+
+        if (!hasAccess) {
+          throw new Error('Access denied: You do not have permission to view this project');
+        }
+      }
 
       set({ currentProject: data, loading: false });
       return { data, error: null };
