@@ -12,24 +12,8 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Get hash params
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const type = hashParams.get('type');
-        const accessToken = hashParams.get('access_token');
-
-        console.log('AuthCallback - Received:', { type, hasToken: !!accessToken });
-
-        // If this is a recovery type (password reset), just navigate to reset password
-        // Supabase will have already processed the token from the URL
-        if (type === 'recovery') {
-          console.log('Password recovery detected - navigating to reset password');
-          // Use navigate to go to reset password, the URL hash will be preserved
-          navigate('/reset-password', { replace: true });
-          return;
-        }
-
-        // For other callbacks (OAuth, email verification, etc), wait for Supabase to process
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Wait for Supabase to process the auth URL/tokens
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // Get the session from URL hash
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
