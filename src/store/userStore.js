@@ -177,7 +177,7 @@ const useUserStore = create((set, get) => ({
       // Use VITE_APP_URL from env if available, otherwise fallback to window.location.origin
       const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${appUrl}/reset-password`,
+        redirectTo: `${appUrl}/auth/callback`,
       });
 
       if (resetError) {

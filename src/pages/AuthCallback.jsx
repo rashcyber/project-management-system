@@ -12,6 +12,17 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        // Check if this is a password recovery callback
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const type = hashParams.get('type');
+
+        // If this is a recovery type, redirect to reset password page
+        if (type === 'recovery') {
+          console.log('Password recovery detected, redirecting to reset password page');
+          navigate('/reset-password');
+          return;
+        }
+
         // Get the session from URL hash
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
@@ -38,7 +49,7 @@ const AuthCallback = () => {
           toast.success('Successfully authenticated!');
           navigate('/dashboard');
         } else {
-          // No session found
+          // No session found, redirect to login
           navigate('/login');
         }
       } catch (error) {
@@ -48,7 +59,8 @@ const AuthCallback = () => {
       }
     };
 
-    handleAuthCallback();
+    // Small delay to ensure Supabase is initialized
+    setTimeout(handleAuthCallback, 100);
   }, [navigate, setUser, setSession, setProfile]);
 
   return (

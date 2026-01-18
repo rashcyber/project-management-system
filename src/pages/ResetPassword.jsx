@@ -22,31 +22,38 @@ const ResetPassword = () => {
   useEffect(() => {
     // Check if we have a valid recovery session
     const checkSession = async () => {
-      // Check URL for recovery token (Supabase adds this)
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const type = hashParams.get('type');
+      try {
+        // Supabase v2 automatically handles the recovery token in the hash
+        // We just need to check if we have a valid session
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (type === 'recovery' && accessToken) {
-        // SECURITY: Clear any existing session first to prevent session hijacking
-        // This ensures we're working with a clean slate on the reset page
-        await supabase.auth.signOut({ scope: 'local' });
-
-        // Set the session with the recovery token (temporary, only for this page)
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: hashParams.get('refresh_token') || '',
-        });
-
-        if (!error) {
-          setIsValidSession(true);
+        if (error) {
+          console.error('Session error:', error);
+          setIsCheckingSession(false);
+          return;
         }
-      }
 
-      setIsCheckingSession(false);
+        // Check if the session is from a recovery flow
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const type = hashParams.get('type');
+        const accessToken = hashParams.get('access_token');
+
+        // Valid recovery session if we have a token with recovery type OR have an active session
+        if ((type === 'recovery' && accessToken) || (session && session.user)) {
+          setIsValidSession(true);
+        } else {
+          setIsValidSession(false);
+        }
+
+        setIsCheckingSession(false);
+      } catch (error) {
+        console.error('Error checking session:', error);
+        setIsCheckingSession(false);
+      }
     };
 
-    checkSession();
+    // Small delay to ensure auth is initialized
+    setTimeout(checkSession, 100);
   }, []);
 
   const handleChange = (e) => {
