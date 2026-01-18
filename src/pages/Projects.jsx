@@ -234,19 +234,10 @@ const Projects = () => {
                         Edit
                       </button>
                       {(isAdmin() || project.owner_id === profile?.id) && (
-                        <>
-                          <button onClick={() => handleAddMembersClick(project)}>
-                            <UserPlus size={16} />
-                            Add Members
-                          </button>
-                          <button
-                            className="delete-btn"
-                            onClick={() => handleDeleteClick(project)}
-                          >
-                            <Trash2 size={16} />
-                            Delete
-                          </button>
-                        </>
+                        <button onClick={() => handleAddMembersClick(project)}>
+                          <UserPlus size={16} />
+                          Add Members
+                        </button>
                       )}
                     </div>
                   )}
@@ -286,13 +277,24 @@ const Projects = () => {
                     </div>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="small"
-                  onClick={() => navigate(`/projects/${project.id}/board`)}
-                >
-                  View Board
-                </Button>
+                <div className="project-card-actions">
+                  <Button
+                    variant="ghost"
+                    size="small"
+                    onClick={() => navigate(`/projects/${project.id}/board`)}
+                  >
+                    View Board
+                  </Button>
+                  {(isAdmin() || project.owner_id === profile?.id) && (
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      className="delete-btn"
+                      icon={<Trash2 size={14} />}
+                      onClick={() => handleDeleteClick(project)}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           ))}

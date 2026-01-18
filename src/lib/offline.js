@@ -193,6 +193,59 @@ const processPendingAction = async (action) => {
       return {};
     }
 
+    case 'create_project': {
+      const { projectData, userId } = action.payload;
+
+      // Create project
+      const { data, error } = await supabase
+        .from('projects')
+        .insert(projectData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add owner as project admin
+      const { error: memberError } = await supabase.from('project_members').insert({
+        project_id: data.id,
+        user_id: userId,
+        role: 'admin',
+      });
+
+      if (memberError) {
+        console.error('Failed to add owner as member:', memberError);
+      }
+
+      // Return the created project
+      return { data };
+    }
+
+    case 'update_project': {
+      const { projectId, updates } = action.payload;
+
+      const { data, error } = await supabase
+        .from('projects')
+        .update(updates)
+        .eq('id', projectId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data };
+    }
+
+    case 'delete_project': {
+      const { projectId } = action.payload;
+
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId);
+
+      if (error) throw error;
+      return {};
+    }
+
     default:
       throw new Error(`Unknown action type: ${action.type}`);
   }

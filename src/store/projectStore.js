@@ -143,6 +143,24 @@ const useProjectStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const isOnline = useOfflineStore.getState().isOnline;
+
+      // If offline, queue the action
+      if (!isOnline) {
+        console.log('[OFFLINE] Queueing project creation');
+        const actionId = useOfflineStore.getState().queueAction('create_project', {
+          projectData: { ...projectData, owner_id: user.id },
+          userId: user.id,
+        });
+
+        set({ loading: false });
+        return {
+          data: null,
+          error: new Error('Offline: Your project will be created when you\'re back online'),
+          queued: true,
+          actionId,
+        };
+      }
 
       const { data, error } = await supabase
         .from('projects')
@@ -182,10 +200,15 @@ const useProjectStore = create((set, get) => ({
         .eq('id', data.id)
         .single();
 
-      set((state) => ({
-        projects: [projectWithMembers || data, ...state.projects],
+      // Cache the new project
+      const state = get();
+      const updatedProjects = [projectWithMembers || data, ...state.projects];
+      cacheData(CACHE_KEYS.PROJECTS, updatedProjects);
+
+      set({
+        projects: updatedProjects,
         loading: false,
-      }));
+      });
 
       return { data: projectWithMembers || data, error: null };
     } catch (error) {
@@ -198,6 +221,35 @@ const useProjectStore = create((set, get) => ({
   updateProject: async (projectId, updates) => {
     set({ loading: true, error: null });
     try {
+      const isOnline = useOfflineStore.getState().isOnline;
+
+      // If offline, queue the action and apply optimistically
+      if (!isOnline) {
+        console.log('[OFFLINE] Queueing project update');
+        useOfflineStore.getState().queueAction('update_project', {
+          projectId,
+          updates,
+        });
+
+        // Apply changes optimistically
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId ? { ...p, ...updates } : p
+          ),
+          currentProject:
+            state.currentProject?.id === projectId
+              ? { ...state.currentProject, ...updates }
+              : state.currentProject,
+          loading: false,
+        }));
+
+        return {
+          data: { id: projectId, ...updates },
+          error: new Error('Offline: Changes will sync when you\'re back online'),
+          queued: true,
+        };
+      }
+
       const { data, error } = await supabase
         .from('projects')
         .update(updates)
@@ -229,6 +281,29 @@ const useProjectStore = create((set, get) => ({
   deleteProject: async (projectId) => {
     set({ loading: true, error: null });
     try {
+      const isOnline = useOfflineStore.getState().isOnline;
+
+      // If offline, queue the action and apply optimistically
+      if (!isOnline) {
+        console.log('[OFFLINE] Queueing project deletion');
+        useOfflineStore.getState().queueAction('delete_project', {
+          projectId,
+        });
+
+        // Apply changes optimistically
+        set((state) => ({
+          projects: state.projects.filter((p) => p.id !== projectId),
+          currentProject:
+            state.currentProject?.id === projectId ? null : state.currentProject,
+          loading: false,
+        }));
+
+        return {
+          error: new Error('Offline: Project will be deleted when you\'re back online'),
+          queued: true,
+        };
+      }
+
       const { error } = await supabase
         .from('projects')
         .delete()

@@ -60,21 +60,40 @@ const Analytics = () => {
         return;
       }
 
+      // Apply role-based filtering (must match projectStore logic)
+      let filteredTasks = allTasks;
+      if (profile?.role === 'super_admin') {
+        // Super Admin: See ALL tasks from all projects
+        filteredTasks = allTasks;
+      } else if (profile?.role === 'admin') {
+        // Admin: Tasks from projects they own OR are members of
+        filteredTasks = allTasks.filter(task => {
+          const project = projects.find(p => p.id === task.project_id);
+          return project !== undefined;
+        });
+      } else {
+        // Member/Manager: ONLY tasks from projects they're members of
+        filteredTasks = allTasks.filter(task => {
+          const project = projects.find(p => p.id === task.project_id);
+          return project !== undefined;
+        });
+      }
+
       // Calculate basic stats
-      const completed = allTasks.filter(t => t.status === 'completed');
+      const completed = filteredTasks.filter(t => t.status === 'completed');
       const thisWeekStart = startOfWeek(new Date());
       const thisWeekEnd = endOfWeek(new Date());
-      const tasksThisWeek = allTasks.filter(t => {
+      const tasksThisWeek = filteredTasks.filter(t => {
         const createdAt = new Date(t.created_at);
         return isWithinInterval(createdAt, { start: thisWeekStart, end: thisWeekEnd });
       });
 
       setStats({
-        totalTasks: allTasks.length,
+        totalTasks: filteredTasks.length,
         completedTasks: completed.length,
         tasksThisWeek: tasksThisWeek.length,
-        completionRate: allTasks.length > 0
-          ? Math.round((completed.length / allTasks.length) * 100)
+        completionRate: filteredTasks.length > 0
+          ? Math.round((completed.length / filteredTasks.length) * 100)
           : 0,
       });
 
@@ -85,7 +104,7 @@ const Analytics = () => {
         review: { label: 'Review', count: 0, color: '#8b5cf6' },
         completed: { label: 'Completed', count: 0, color: '#22c55e' },
       };
-      allTasks.forEach(t => {
+      filteredTasks.forEach(t => {
         if (statusCounts[t.status]) {
           statusCounts[t.status].count++;
         }
@@ -99,7 +118,7 @@ const Analytics = () => {
         high: { label: 'High', count: 0, color: '#f97316' },
         urgent: { label: 'Urgent', count: 0, color: '#ef4444' },
       };
-      allTasks.forEach(t => {
+      filteredTasks.forEach(t => {
         if (priorityCounts[t.priority]) {
           priorityCounts[t.priority].count++;
         }
@@ -108,7 +127,7 @@ const Analytics = () => {
 
       // Tasks by project
       const projectCounts = {};
-      allTasks.forEach(t => {
+      filteredTasks.forEach(t => {
         if (t.project) {
           if (!projectCounts[t.project.id]) {
             projectCounts[t.project.id] = {
@@ -141,12 +160,12 @@ const Analytics = () => {
         const dayEnd = new Date(day);
         dayEnd.setHours(23, 59, 59, 999);
 
-        const created = allTasks.filter(t => {
+        const created = filteredTasks.filter(t => {
           const date = new Date(t.created_at);
           return isWithinInterval(date, { start: dayStart, end: dayEnd });
         }).length;
 
-        const completedOnDay = allTasks.filter(t => {
+        const completedOnDay = filteredTasks.filter(t => {
           if (t.status !== 'completed') return false;
           const date = new Date(t.updated_at);
           return isWithinInterval(date, { start: dayStart, end: dayEnd });
@@ -163,7 +182,7 @@ const Analytics = () => {
 
       // Top contributors
       const contributorCounts = {};
-      allTasks.forEach(t => {
+      filteredTasks.forEach(t => {
         if (t.assignee && t.status === 'completed') {
           if (!contributorCounts[t.assignee.id]) {
             contributorCounts[t.assignee.id] = {
