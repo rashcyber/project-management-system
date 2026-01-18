@@ -17,11 +17,16 @@ const AuthCallback = () => {
         const type = hashParams.get('type');
 
         // If this is a recovery type, redirect to reset password page
+        // Pass the hash along so ResetPassword can still access the tokens
         if (type === 'recovery') {
           console.log('Password recovery detected, redirecting to reset password page');
-          navigate('/reset-password');
+          // Redirect but keep the hash so ResetPassword can process it
+          window.location.href = '/reset-password' + window.location.hash;
           return;
         }
+
+        // Wait a bit for Supabase to process the auth URL
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // Get the session from URL hash
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();

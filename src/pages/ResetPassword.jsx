@@ -23,8 +23,39 @@ const ResetPassword = () => {
     // Check if we have a valid recovery session
     const checkSession = async () => {
       try {
-        // Supabase v2 automatically handles the recovery token in the hash
-        // We just need to check if we have a valid session
+        // Get recovery params from URL hash
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const type = hashParams.get('type');
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+
+        console.log('ResetPassword - Checking recovery session:', { type, hasAccessToken: !!accessToken });
+
+        // If we have recovery tokens in the URL, Supabase should process them
+        if (type === 'recovery' && accessToken) {
+          console.log('Recovery tokens found in URL, waiting for Supabase to process...');
+
+          // Give Supabase time to process the recovery token from URL
+          await new Promise(resolve => setTimeout(resolve, 300));
+
+          // Check if session was established
+          const { data: { session }, error } = await supabase.auth.getSession();
+
+          if (error) {
+            console.error('Session error:', error);
+            setIsCheckingSession(false);
+            return;
+          }
+
+          if (session?.user) {
+            console.log('Recovery session established successfully');
+            setIsValidSession(true);
+            setIsCheckingSession(false);
+            return;
+          }
+        }
+
+        // If no recovery tokens in URL, check current session
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
@@ -33,15 +64,12 @@ const ResetPassword = () => {
           return;
         }
 
-        // Check if the session is from a recovery flow
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const type = hashParams.get('type');
-        const accessToken = hashParams.get('access_token');
-
-        // Valid recovery session if we have a token with recovery type OR have an active session
-        if ((type === 'recovery' && accessToken) || (session && session.user)) {
+        // Valid if we have an active session (from recovery or other means)
+        if (session?.user) {
+          console.log('Valid session found');
           setIsValidSession(true);
         } else {
+          console.log('No valid session found');
           setIsValidSession(false);
         }
 
@@ -53,7 +81,7 @@ const ResetPassword = () => {
     };
 
     // Small delay to ensure auth is initialized
-    setTimeout(checkSession, 100);
+    setTimeout(checkSession, 200);
   }, []);
 
   const handleChange = (e) => {
