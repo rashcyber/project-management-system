@@ -12,21 +12,24 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Check if this is a password recovery callback
+        // Get hash params
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const type = hashParams.get('type');
+        const accessToken = hashParams.get('access_token');
 
-        // If this is a recovery type, redirect to reset password page
-        // Pass the hash along so ResetPassword can still access the tokens
+        console.log('AuthCallback - Received:', { type, hasToken: !!accessToken });
+
+        // If this is a recovery type (password reset), just navigate to reset password
+        // Supabase will have already processed the token from the URL
         if (type === 'recovery') {
-          console.log('Password recovery detected, redirecting to reset password page');
-          // Redirect but keep the hash so ResetPassword can process it
-          window.location.href = '/reset-password' + window.location.hash;
+          console.log('Password recovery detected - navigating to reset password');
+          // Use navigate to go to reset password, the URL hash will be preserved
+          navigate('/reset-password', { replace: true });
           return;
         }
 
-        // Wait a bit for Supabase to process the auth URL
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // For other callbacks (OAuth, email verification, etc), wait for Supabase to process
+        await new Promise(resolve => setTimeout(resolve, 800));
 
         // Get the session from URL hash
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -34,7 +37,7 @@ const AuthCallback = () => {
         if (sessionError) {
           console.error('Session error:', sessionError);
           toast.error('Authentication failed. Please try again.');
-          navigate('/login');
+          navigate('/login', { replace: true });
           return;
         }
 
@@ -52,15 +55,15 @@ const AuthCallback = () => {
           setProfile(profile);
 
           toast.success('Successfully authenticated!');
-          navigate('/dashboard');
+          navigate('/dashboard', { replace: true });
         } else {
           // No session found, redirect to login
-          navigate('/login');
+          navigate('/login', { replace: true });
         }
       } catch (error) {
         console.error('Auth callback error:', error);
         toast.error('An error occurred during authentication.');
-        navigate('/login');
+        navigate('/login', { replace: true });
       }
     };
 

@@ -31,28 +31,26 @@ const ResetPassword = () => {
 
         console.log('ResetPassword - Checking recovery session:', { type, hasAccessToken: !!accessToken });
 
-        // If we have recovery tokens in the URL, Supabase should process them
+        // If we have recovery tokens in the URL, manually set the session
         if (type === 'recovery' && accessToken) {
-          console.log('Recovery tokens found in URL, waiting for Supabase to process...');
+          console.log('Recovery tokens found in URL, setting session...');
 
-          // Give Supabase time to process the recovery token from URL
-          await new Promise(resolve => setTimeout(resolve, 300));
+          // Manually set the session with the tokens from the URL
+          const { error: setSessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
 
-          // Check if session was established
-          const { data: { session }, error } = await supabase.auth.getSession();
-
-          if (error) {
-            console.error('Session error:', error);
+          if (setSessionError) {
+            console.error('Failed to set session:', setSessionError);
             setIsCheckingSession(false);
             return;
           }
 
-          if (session?.user) {
-            console.log('Recovery session established successfully');
-            setIsValidSession(true);
-            setIsCheckingSession(false);
-            return;
-          }
+          console.log('Recovery session set successfully');
+          setIsValidSession(true);
+          setIsCheckingSession(false);
+          return;
         }
 
         // If no recovery tokens in URL, check current session
@@ -80,8 +78,10 @@ const ResetPassword = () => {
       }
     };
 
-    // Small delay to ensure auth is initialized
-    setTimeout(checkSession, 200);
+    // Small delay to ensure auth is initialized, then check
+    const timeoutId = setTimeout(checkSession, 300);
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const handleChange = (e) => {
