@@ -10,6 +10,7 @@ import useAuthStore from '../../store/authStore';
 import useNotificationStore from '../../store/notificationStore';
 import { supabase } from '../../lib/supabase';
 import { initializeOfflineDetection } from '../../lib/offline';
+import { subscribeToNotificationsForEmail } from '../../lib/emailService';
 import './Layout.css';
 
 const Layout = () => {
@@ -91,7 +92,12 @@ const Layout = () => {
     if (user) {
       fetchNotifications();
       const unsubscribe = subscribeToNotifications(user.id);
-      return unsubscribe;
+      const unsubscribeEmail = subscribeToNotificationsForEmail(user.id);
+
+      return () => {
+        unsubscribe?.();
+        unsubscribeEmail?.();
+      };
     }
   }, [user, fetchNotifications, subscribeToNotifications]);
 

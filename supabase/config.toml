@@ -1,0 +1,10 @@
+# Supabase config file for functions and migrations
+
+[functions.send-email]
+verify_jwt = false
+
+[env.production]
+key = "sbp_prod_..."  # Replace with your production key
+
+[env.local]
+key = "sbp_local_..."  # Replace with your local key
