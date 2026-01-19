@@ -36,21 +36,26 @@ const GanttChart = ({ tasks, onTaskUpdate, projectId }) => {
     };
   }, [tasks]);
 
-  // Generate grid dates (every week)
+  // Generate grid dates (every day)
   const gridDates = useMemo(() => {
     const dates = [];
     const current = new Date(startDate);
+    // Make sure we include endDate
     while (current <= endDate) {
       dates.push(new Date(current));
       current.setDate(current.getDate() + 1);
+    }
+    // Add one more day to ensure endDate is visible
+    if (dates[dates.length - 1] < endDate) {
+      dates.push(new Date(endDate));
     }
     return dates;
   }, [startDate, endDate]);
 
   // Get total days for width calculation
-  const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+  const totalDays = Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)));
   const cellWidth = 30; // pixels per day
-  const totalWidth = totalDays * cellWidth;
+  const totalWidth = Math.max(totalDays * cellWidth, 600); // minimum width of 600px
 
   // Calculate task bar position and width
   const getTaskBarStyle = (task) => {
@@ -213,17 +218,28 @@ const GanttChart = ({ tasks, onTaskUpdate, projectId }) => {
           <div className="gantt-header">
             <div className="gantt-header-row" style={{ width: `${totalWidth}px` }}>
               {gridDates.map((date, idx) => (
-                // Show date every 7 days
+                // Show date every 7 days (more compact header)
                 idx % 7 === 0 && (
                   <div
                     key={idx}
                     className="gantt-header-cell"
                     style={{ width: `${cellWidth * 7}px` }}
+                    title={formatDate(date)}
                   >
                     {formatDate(date)}
                   </div>
                 )
               ))}
+              {/* Add final marker if needed */}
+              {gridDates.length % 7 !== 0 && (
+                <div
+                  className="gantt-header-cell"
+                  style={{ width: `${(gridDates.length % 7) * cellWidth}px` }}
+                  title={formatDate(endDate)}
+                >
+                  {formatDate(endDate)}
+                </div>
+              )}
             </div>
             {/* Grid lines */}
             <div className="gantt-grid-lines" style={{ width: `${totalWidth}px` }}>

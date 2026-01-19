@@ -78,8 +78,9 @@ const ResetPassword = () => {
       }
     };
 
-    // Small delay to ensure auth is initialized, then check
-    const timeoutId = setTimeout(checkSession, 300);
+    // Delay to ensure Supabase auth is initialized properly
+    // Recovery tokens expire after 1 hour, so we need to validate quickly
+    const timeoutId = setTimeout(checkSession, 500);
 
     return () => clearTimeout(timeoutId);
   }, []);
