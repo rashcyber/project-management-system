@@ -15,12 +15,14 @@ const AuthCallback = () => {
         // Wait for Supabase to process the auth URL/tokens
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Check for recovery flow - if recovery tokens in URL, skip login and go to reset-password
+        // Check for recovery/invitation flow - if recovery tokens in URL, go to reset-password
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const type = hashParams.get('type');
+        const accessToken = hashParams.get('access_token');
 
-        if (type === 'recovery') {
-          console.log('Recovery link detected, routing to reset-password');
+        // Route to reset-password for recovery types (includes password reset and invitations)
+        if ((type === 'recovery' || type === 'signup') && accessToken) {
+          console.log('Recovery/Invitation link detected, routing to reset-password', { type });
           navigate('/reset-password', { replace: true });
           return;
         }

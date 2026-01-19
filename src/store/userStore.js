@@ -176,8 +176,12 @@ const useUserStore = create((set, get) => ({
       // Step 3: Send password reset email so user can set their own password
       // Use VITE_APP_URL from env if available, otherwise fallback to window.location.origin
       const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+
+      // For invitations, redirect through auth/callback which will route to reset-password
+      const redirectUrl = `${appUrl}/auth/callback`;
+
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${appUrl}/reset-password`,
+        redirectTo: redirectUrl,
       });
 
       if (resetError) {
