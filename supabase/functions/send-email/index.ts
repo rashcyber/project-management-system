@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY")
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 const APP_URL = Deno.env.get("APP_URL") || "https://project-management-system-ten-eta.vercel.app"
@@ -131,38 +130,17 @@ const getEmailTemplate = (type: string, data: any): { subject: string; html: str
   }
 }
 
-// Send email via SendGrid
-async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+// Send email via Supabase built-in email service
+async function sendEmail(to: string, subject: string, html: string, supabase: any): Promise<boolean> {
   try {
-    const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${SENDGRID_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        personalizations: [
-          {
-            to: [{ email: to }],
-            subject: subject,
-          },
-        ],
-        from: {
-          email: "noreply@taskmanagement.app",
-          name: "Task Management",
-        },
-        content: [
-          {
-            type: "text/html",
-            value: html,
-          },
-        ],
-      }),
+    const { error } = await supabase.auth.admin.sendRawEmail({
+      email: to,
+      subject: subject,
+      html: html,
     })
 
-    if (!response.ok) {
-      const error = await response.text()
-      console.error("SendGrid error:", error)
+    if (error) {
+      console.error("Supabase email error:", error)
       return false
     }
 
@@ -298,7 +276,7 @@ serve(async (req) => {
     const { subject, html } = getEmailTemplate(payload.type, emailData)
 
     // Send email
-    const sent = await sendEmail(userPrefs.email, subject, html)
+    const sent = await sendEmail(userPrefs.email, subject, html, supabase)
 
     if (sent) {
       // Optional: Log email send in database
