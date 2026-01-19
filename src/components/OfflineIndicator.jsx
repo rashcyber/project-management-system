@@ -6,6 +6,7 @@ import './OfflineIndicator.css';
 const OfflineIndicator = () => {
   const { isOnline, syncInProgress, pendingActions, error } = useOfflineStore();
   const [showNotification, setShowNotification] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     // Show notification when connection changes
@@ -40,16 +41,16 @@ const OfflineIndicator = () => {
         <div className="offline-indicator-text">
           {!isOnline && (
             <span>
-              Offline • {pendingActions.length} pending action{pendingActions.length !== 1 ? 's' : ''}
+              Offline • {pendingActions.length} pending action{pendingActions.length !== 1 ? 's' : ''} • You can still view cached data
             </span>
           )}
 
           {isOnline && syncInProgress && (
-            <span>Syncing pending changes...</span>
+            <span>Syncing {pendingActions.length} pending change{pendingActions.length !== 1 ? 's' : ''}...</span>
           )}
 
           {isOnline && !syncInProgress && pendingActions.length > 0 && (
-            <span>Changes synced successfully</span>
+            <span>✓ All {pendingActions.length} change{pendingActions.length !== 1 ? 's' : ''} synced successfully</span>
           )}
 
           {error && (

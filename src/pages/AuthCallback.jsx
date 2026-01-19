@@ -15,6 +15,16 @@ const AuthCallback = () => {
         // Wait for Supabase to process the auth URL/tokens
         await new Promise(resolve => setTimeout(resolve, 500));
 
+        // Check for recovery flow - if recovery tokens in URL, skip login and go to reset-password
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const type = hashParams.get('type');
+
+        if (type === 'recovery') {
+          console.log('Recovery link detected, routing to reset-password');
+          navigate('/reset-password', { replace: true });
+          return;
+        }
+
         // Get the session from URL hash
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
