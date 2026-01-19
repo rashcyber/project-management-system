@@ -57,24 +57,35 @@ const GanttChart = ({ tasks, onTaskUpdate, projectId }) => {
   const cellWidth = 30; // pixels per day
   const totalWidth = Math.max(totalDays * cellWidth, 600); // minimum width of 600px
 
-  // Calculate task bar position and width
+  // Calculate task bar position and width using pixel-based positioning for perfect alignment
   const getTaskBarStyle = (task) => {
     if (!task.due_date && !task.created_at) {
-      return { left: '0%', width: '5%' };
+      return { left: '0px', width: '30px' };
     }
 
-    const taskStart = task.created_at ? new Date(task.created_at) : new Date(startDate);
+    // Use due_date as the primary indicator, created_at as fallback
+    const taskStart = task.created_at ? new Date(task.created_at) : startDate;
     const taskEnd = task.due_date ? new Date(task.due_date) : new Date();
 
-    const startOffset = Math.max(0, (taskStart - startDate) / (1000 * 60 * 60 * 24));
-    const duration = Math.max(1, (taskEnd - taskStart) / (1000 * 60 * 60 * 24));
+    // Calculate exact day offsets from startDate (normalize to start of day)
+    const startDay = new Date(taskStart);
+    startDay.setHours(0, 0, 0, 0);
+    const startDateNorm = new Date(startDate);
+    startDateNorm.setHours(0, 0, 0, 0);
 
-    const leftPercent = (startOffset / totalDays) * 100;
-    const widthPercent = (duration / totalDays) * 100;
+    const startDayOffset = Math.max(0, Math.floor((startDay.getTime() - startDateNorm.getTime()) / (1000 * 60 * 60 * 24)));
+
+    const endDay = new Date(taskEnd);
+    endDay.setHours(0, 0, 0, 0);
+    const endDayOffset = Math.max(startDayOffset + 1, Math.floor((endDay.getTime() - startDateNorm.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+
+    // Convert to pixels (aligned to grid)
+    const leftPixels = startDayOffset * cellWidth;
+    const widthPixels = Math.max((endDayOffset - startDayOffset) * cellWidth, cellWidth * 0.5);
 
     return {
-      left: `${leftPercent}%`,
-      width: `${Math.max(widthPercent, 2)}%`
+      left: `${leftPixels}px`,
+      width: `${widthPixels}px`
     };
   };
 

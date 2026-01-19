@@ -259,6 +259,7 @@
 .gantt-task-bar,
 .gantt-subtask-bar {
   position: absolute;
+  top: 13px;
   height: 24px;
   display: flex;
   align-items: center;
@@ -273,6 +274,7 @@
   font-weight: 600;
   color: white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  /* Using left/width from inline styles for precise alignment */
 }
 
 .gantt-task-bar:hover,
