@@ -1,0 +1,370 @@
+.gantt-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Legend */
+.gantt-legend {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+/* Main wrapper */
+.gantt-wrapper {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Left side - Task list */
+.gantt-tasks-column {
+  width: 300px;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  overflow-y: auto;
+}
+
+.gantt-task-header {
+  position: sticky;
+  top: 0;
+  padding: 0.75rem 1rem;
+  background: var(--bg-primary);
+  border-bottom: 2px solid var(--border-color);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  z-index: 10;
+}
+
+.task-title-col {
+  padding: 0 0.5rem;
+}
+
+.gantt-task-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.gantt-task-row,
+.gantt-subtask-row {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+  min-height: 50px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.gantt-task-row:hover {
+  background: var(--bg-primary);
+}
+
+.gantt-task-row.completed {
+  opacity: 0.6;
+}
+
+.gantt-subtask-row {
+  padding-left: 1.5rem;
+  min-height: 40px;
+  background: var(--bg-primary);
+  font-size: 0.875rem;
+}
+
+.task-row-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+}
+
+.expand-btn:hover {
+  color: var(--text-primary);
+}
+
+.task-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title {
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.9rem;
+}
+
+.task-meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.assignee-badge,
+.priority-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  background: #3b82f6;
+}
+
+.priority-badge {
+  text-transform: capitalize;
+}
+
+.subtask-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.subtask-indicator {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.subtask-title {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.completed-badge {
+  color: #22c55e;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+/* Right side - Timeline */
+.gantt-timeline-column {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  background: var(--bg-primary);
+}
+
+.gantt-header {
+  position: sticky;
+  top: 0;
+  z-index: 11;
+  background: var(--bg-secondary);
+}
+
+.gantt-header-row {
+  display: flex;
+  border-bottom: 2px solid var(--border-color);
+  position: relative;
+}
+
+.gantt-header-cell {
+  padding: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Grid lines */
+.gantt-grid-lines {
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.gantt-grid-line {
+  border-right: 1px solid var(--border-color);
+}
+
+.gantt-grid-line.week-line {
+  border-right: 2px solid var(--border-color);
+}
+
+/* Task bars */
+.gantt-bars {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.gantt-bar-row {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+  min-height: 50px;
+  position: relative;
+}
+
+.gantt-subtask-bar-row {
+  min-height: 40px;
+}
+
+.gantt-task-bar,
+.gantt-subtask-bar {
+  position: absolute;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.gantt-task-bar:hover,
+.gantt-subtask-bar:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  filter: brightness(1.1);
+}
+
+.gantt-task-bar.completed {
+  opacity: 0.7;
+}
+
+.gantt-subtask-bar.completed {
+  opacity: 0.8;
+}
+
+.bar-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Today indicator */
+.gantt-today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ef4444;
+  z-index: 5;
+}
+
+/* Empty state */
+.gantt-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .gantt-tasks-column {
+    width: 250px;
+  }
+
+  .gantt-header-cell {
+    font-size: 0.7rem;
+    padding: 0.5rem 0.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .gantt-wrapper {
+    flex-direction: column;
+  }
+
+  .gantt-tasks-column {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    max-height: 250px;
+  }
+
+  .gantt-legend {
+    gap: 1rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Scrollbar styling */
+.gantt-tasks-column::-webkit-scrollbar,
+.gantt-timeline-column::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.gantt-tasks-column::-webkit-scrollbar-track,
+.gantt-timeline-column::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.gantt-tasks-column::-webkit-scrollbar-thumb,
+.gantt-timeline-column::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.gantt-tasks-column::-webkit-scrollbar-thumb:hover,
+.gantt-timeline-column::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}

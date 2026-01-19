@@ -29,6 +29,7 @@ import {
   X,
   List,
   HelpCircle,
+  Calendar,
 } from 'lucide-react';
 import { Button, Modal, Loading, KeyboardShortcutsModal } from '../components/common';
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
@@ -37,6 +38,7 @@ import TaskCard from '../components/tasks/TaskCard';
 import TaskForm from '../components/tasks/TaskForm';
 import TaskDetail from '../components/tasks/TaskDetail';
 import ProjectFiles from '../components/projects/ProjectFiles';
+import GanttChart from '../components/tasks/GanttChart';
 import useProjectStore from '../store/projectStore';
 import useTaskStore from '../store/taskStore';
 import useDependencyStore from '../store/dependencyStore';
@@ -588,6 +590,13 @@ const ProjectBoard = () => {
           Board
         </button>
         <button
+          className={`board-tab ${activeTab === 'gantt' ? 'active' : ''}`}
+          onClick={() => setActiveTab('gantt')}
+        >
+          <Calendar size={18} />
+          Timeline
+        </button>
+        <button
           className={`board-tab ${activeTab === 'files' ? 'active' : ''}`}
           onClick={() => setActiveTab('files')}
         >
@@ -652,6 +661,14 @@ const ProjectBoard = () => {
               ) : null}
             </DragOverlay>
           </DndContext>
+        )}
+
+        {activeTab === 'gantt' && (
+          <GanttChart
+            tasks={localTasks}
+            onTaskUpdate={updateTask}
+            projectId={projectId}
+          />
         )}
 
         {activeTab === 'files' && (
