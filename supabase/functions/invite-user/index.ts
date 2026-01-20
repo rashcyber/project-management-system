@@ -11,13 +11,28 @@ interface InvitationRequest {
   fullName: string
 }
 
+// CORS headers for cross-origin requests
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+}
+
 serve(async (req) => {
   try {
+    // Handle CORS preflight requests
+    if (req.method === "OPTIONS") {
+      return new Response("ok", {
+        status: 200,
+        headers: corsHeaders,
+      })
+    }
+
     // Only allow POST requests
     if (req.method !== "POST") {
       return new Response(JSON.stringify({ error: "Method not allowed" }), {
         status: 405,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
@@ -29,7 +44,7 @@ serve(async (req) => {
         JSON.stringify({ error: "Email and role are required" }),
         {
           status: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       )
     }
@@ -39,7 +54,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
@@ -53,7 +68,7 @@ serve(async (req) => {
     if (userError || !requestingUser) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
@@ -67,7 +82,7 @@ serve(async (req) => {
     if (!requestingProfile || !["super_admin", "admin"].includes(requestingProfile.role)) {
       return new Response(JSON.stringify({ error: "Only admins can invite users" }), {
         status: 403,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
@@ -81,7 +96,7 @@ serve(async (req) => {
     if (existingUser) {
       return new Response(JSON.stringify({ error: "User already exists" }), {
         status: 409,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
@@ -106,7 +121,7 @@ serve(async (req) => {
         JSON.stringify({ error: "Failed to create user", details: createError?.message }),
         {
           status: 500,
-          headers: { "Content-Type": "application/json" },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       )
     }
@@ -129,7 +144,7 @@ serve(async (req) => {
         JSON.stringify({ error: "Failed to update profile", details: updateError.message }),
         {
           status: 500,
-          headers: { "Content-Type": "application/json" },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       )
     }
@@ -149,7 +164,7 @@ serve(async (req) => {
         JSON.stringify({ error: "Failed to generate reset link", details: resetError.message }),
         {
           status: 500,
-          headers: { "Content-Type": "application/json" },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       )
     }
@@ -166,7 +181,7 @@ serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     )
   } catch (error) {
@@ -178,7 +193,7 @@ serve(async (req) => {
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     )
   }
