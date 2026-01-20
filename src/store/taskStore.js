@@ -128,6 +128,48 @@ const useTaskStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const isOnline = useOfflineStore.getState().isOnline;
+
+      // Extract assignee_ids from taskData (handle both single and array)
+      const assignee_ids = taskData.assignee_ids || [];
+      delete taskData.assignee_ids;
+
+      // If offline, queue the action
+      if (!isOnline) {
+        console.log('[OFFLINE] Queueing task creation');
+        const actionId = useOfflineStore.getState().queueAction('createTask', {
+          taskData: { ...taskData, created_by: user.id },
+          assignee_ids,
+        });
+
+        // Create optimistic task for immediate UI update
+        const optimisticTask = {
+          ...taskData,
+          id: actionId,
+          created_by: user.id,
+          creator: { id: user.id, full_name: 'You', email: '', avatar_url: null },
+          assignees: [],
+          subtasks: [],
+          comments: [],
+          task_labels: [],
+          files: [],
+          offline: true,
+          position: 0,
+        };
+
+        const state = get();
+        set({
+          tasks: [...state.tasks, optimisticTask],
+          loading: false,
+        });
+
+        return {
+          data: optimisticTask,
+          error: null,
+          queued: true,
+          actionId,
+        };
+      }
 
       // Get max position for the status column
       const { data: maxPosData } = await supabase
@@ -139,10 +181,6 @@ const useTaskStore = create((set, get) => ({
         .limit(1);
 
       const maxPosition = maxPosData?.[0]?.position ?? -1;
-
-      // Extract assignee_ids from taskData (handle both single and array)
-      const assignee_ids = taskData.assignee_ids || [];
-      delete taskData.assignee_ids;
 
       const { data, error } = await supabase
         .from('tasks')
@@ -237,8 +275,28 @@ const useTaskStore = create((set, get) => ({
   updateTask: async (taskId, updates) => {
     set({ loading: true, error: null });
     try {
+      const isOnline = useOfflineStore.getState().isOnline;
       const oldTask = get().tasks.find(t => t.id === taskId);
       const oldAssigneeIds = oldTask?.assignees?.map(a => a.id) || [];
+
+      // If offline, queue the action and update optimistically
+      if (!isOnline) {
+        console.log('[OFFLINE] Queueing task update');
+        const actionId = useOfflineStore.getState().queueAction('updateTask', {
+          taskId,
+          updates: { ...updates },
+        });
+
+        // Update optimistically
+        set((state) => ({
+          tasks: state.tasks.map(t =>
+            t.id === taskId ? { ...t, ...updates } : t
+          ),
+          loading: false,
+        }));
+
+        return { data: { id: taskId, ...updates }, error: null, queued: true, actionId };
+      }
 
       // Handle assignee_ids update (multiple assignees)
       let newAssigneeIds = [];

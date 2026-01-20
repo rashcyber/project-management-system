@@ -66,7 +66,7 @@ const ProjectNew = () => {
 
     if (!validateForm()) return;
 
-    const { data, error } = await createProject({
+    const { data, error, queued } = await createProject({
       name: formData.name.trim(),
       description: formData.description.trim(),
       color: formData.color,
@@ -74,6 +74,12 @@ const ProjectNew = () => {
 
     if (error) {
       toast.error(error.message || 'Failed to create project');
+      return;
+    }
+
+    if (queued) {
+      toast.success('Project queued! Will be created when you\'re back online.');
+      navigate('/projects');
       return;
     }
 

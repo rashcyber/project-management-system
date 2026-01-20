@@ -153,10 +153,27 @@ const useProjectStore = create((set, get) => ({
           userId: user.id,
         });
 
-        set({ loading: false });
+        // Create an optimistic project object for immediate UI update
+        const optimisticProject = {
+          ...projectData,
+          id: actionId, // Use action ID as temporary ID
+          owner_id: user.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          offline: true, // Mark as offline
+        };
+
+        const state = get();
+        const updatedProjects = [optimisticProject, ...state.projects];
+
+        set({
+          projects: updatedProjects,
+          loading: false,
+        });
+
         return {
-          data: null,
-          error: new Error('Offline: Your project will be created when you\'re back online'),
+          data: optimisticProject,
+          error: null,
           queued: true,
           actionId,
         };
