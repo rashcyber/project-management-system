@@ -49,10 +49,10 @@ serve(async (req) => {
       )
     }
 
-    // Verify the requester is authenticated and is an admin
+    // Verify the requester is authenticated
     const authHeader = req.headers.get("Authorization")
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
@@ -63,35 +63,52 @@ serve(async (req) => {
 
     // Verify the user making the request is an admin
     const token = authHeader.replace("Bearer ", "")
-    const { data: { user: requestingUser }, error: userError } = await supabase.auth.getUser(token)
+
+    // Use admin API to verify token
+    const { data: { user: requestingUser }, error: userError } = await supabase.auth.admin.getUserById(token)
 
     if (userError || !requestingUser) {
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      console.error("Token verification error:", userError)
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token", details: userError?.message }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
     }
 
     // Check if requesting user is admin
-    const { data: requestingProfile } = await supabase
+    const { data: requestingProfile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", requestingUser.id)
       .single()
 
-    if (!requestingProfile || !["super_admin", "admin"].includes(requestingProfile.role)) {
-      return new Response(JSON.stringify({ error: "Only admins can invite users" }), {
+    if (profileError || !requestingProfile) {
+      console.error("Profile fetch error:", profileError)
+      return new Response(JSON.stringify({ error: "Could not verify admin status" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
+    if (!["super_admin", "admin"].includes(requestingProfile.role)) {
+      return new Response(
+        JSON.stringify({ error: "Only admins can invite users", userRole: requestingProfile.role }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
     // Check if user already exists
-    const { data: existingUser } = await supabase
+    const { data: existingUser, error: existError } = await supabase
       .from("profiles")
       .select("id")
       .eq("email", email)
-      .single()
+      .maybeSingle()
 
     if (existingUser) {
       return new Response(JSON.stringify({ error: "User already exists" }), {
@@ -126,9 +143,11 @@ serve(async (req) => {
       )
     }
 
+    console.log("User created:", newAuthUser.user.id)
+
     // Step 2: Update the profile with the correct role
     // Wait a moment for the trigger to create the profile
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await new Promise(resolve => setTimeout(resolve, 800))
 
     const { error: updateError } = await supabase
       .from("profiles")
@@ -149,8 +168,10 @@ serve(async (req) => {
       )
     }
 
+    console.log("Profile updated with role:", role)
+
     // Step 3: Send password reset email so user can set their own password
-    const { error: resetError } = await supabase.auth.admin.generateLink({
+    const { data: linkData, error: resetError } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email: email,
       options: {
@@ -168,6 +189,8 @@ serve(async (req) => {
         }
       )
     }
+
+    console.log("Recovery link generated for:", email)
 
     return new Response(
       JSON.stringify({
