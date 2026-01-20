@@ -58,14 +58,26 @@ serve(async (req) => {
       })
     }
 
-    // Create Supabase client with service role (admin privileges)
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
+    // Create Supabase clients
+    const supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
+    const supabaseClient = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
 
-    // Verify the user making the request is an admin
+    // Extract the token
     const token = authHeader.replace("Bearer ", "")
 
-    // Use admin API to verify token
-    const { data: { user: requestingUser }, error: userError } = await supabase.auth.admin.getUserById(token)
+    // Set the token on the client to use it for requests
+    await supabaseClient.auth.setSession({
+      access_token: token,
+      refresh_token: "",
+    })
+
+    // Get the current user from the token
+    const { data: { user: requestingUser }, error: userError } = await supabaseClient.auth.getUser(token)
 
     if (userError || !requestingUser) {
       console.error("Token verification error:", userError)
@@ -78,8 +90,10 @@ serve(async (req) => {
       )
     }
 
+    console.log("User verified:", requestingUser.id)
+
     // Check if requesting user is admin
-    const { data: requestingProfile, error: profileError } = await supabase
+    const { data: requestingProfile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("role")
       .eq("id", requestingUser.id)
@@ -103,8 +117,10 @@ serve(async (req) => {
       )
     }
 
+    console.log("User is admin, proceeding with invitation")
+
     // Check if user already exists
-    const { data: existingUser, error: existError } = await supabase
+    const { data: existingUser } = await supabaseAdmin
       .from("profiles")
       .select("id")
       .eq("email", email)
@@ -121,7 +137,7 @@ serve(async (req) => {
     const tempPassword = crypto.getRandomValues(new Uint8Array(16)).toString() + "A1!"
 
     // Step 1: Create the user via admin API
-    const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
+    const { data: newAuthUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       password: tempPassword,
       email_confirm: false,
@@ -149,7 +165,7 @@ serve(async (req) => {
     // Wait a moment for the trigger to create the profile
     await new Promise(resolve => setTimeout(resolve, 800))
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from("profiles")
       .update({
         role: role,
@@ -170,8 +186,8 @@ serve(async (req) => {
 
     console.log("Profile updated with role:", role)
 
-    // Step 3: Send password reset email so user can set their own password
-    const { data: linkData, error: resetError } = await supabase.auth.admin.generateLink({
+    // Step 3: Generate password reset email link
+    const { data: linkData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: email,
       options: {
