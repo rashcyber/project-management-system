@@ -141,10 +141,11 @@ const ResetPassword = () => {
       // 2. Clear the URL hash to prevent token reuse
       window.history.replaceState({}, document.title, window.location.pathname);
 
-      // 3. Add a small delay to ensure session is cleared before navigation
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // 3. Add delay to ensure session is fully cleared and profile is saved
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      navigate('/login');
+      // 4. Navigate to login - user must log in with their new password
+      navigate('/login', { replace: true });
     } catch (error) {
       toast.error(error.message || 'Failed to set password');
     }
