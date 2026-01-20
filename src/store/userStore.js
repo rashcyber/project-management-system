@@ -163,17 +163,37 @@ const useUserStore = create((set, get) => ({
       if (signUpError) throw signUpError;
 
       // Step 2: Update the profile with the correct role
+      // This is critical - we must ensure the role is saved before sending the email
       if (signUpData.user) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({
             role: role,
             full_name: fullName || email.split('@')[0],
           })
           .eq('id', signUpData.user.id);
+
+        if (updateError) {
+          console.error('Failed to update user profile role:', updateError);
+          throw updateError;
+        }
+
+        // Add a small delay to ensure the profile update is persisted
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      // Step 3: Send password reset email so user can set their own password
+      // Step 3: Sign out the current user if this invitation created a session
+      // We don't want the inviting admin to be logged out
+      // Get the current session before signUp affected it
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+      // If we're not signed in as the invited user, we're good
+      // If we are signed in as the invited user (which shouldn't happen with signUp), sign out
+      if (currentSession?.user?.email === email) {
+        await supabase.auth.signOut({ scope: 'local' });
+      }
+
+      // Step 4: Send password reset email so user can set their own password
       // Use VITE_APP_URL from env if available, otherwise fallback to window.location.origin
       const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 

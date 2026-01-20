@@ -29,7 +29,12 @@ const ResetPassword = () => {
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
 
-        console.log('ResetPassword - Checking recovery session:', { type, hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken });
+        console.log('ResetPassword - Checking recovery session:', {
+          type,
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          hashLength: window.location.hash.length
+        });
 
         // If we have tokens in the URL (recovery or invitation), set the session
         if (accessToken && refreshToken) {
@@ -50,6 +55,10 @@ const ResetPassword = () => {
           }
 
           console.log('Session set successfully from tokens');
+
+          // Add delay to ensure session is properly established
+          await new Promise(resolve => setTimeout(resolve, 100));
+
           setIsValidSession(true);
           setIsCheckingSession(false);
           return;
