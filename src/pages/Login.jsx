@@ -19,22 +19,22 @@ const Login = () => {
   const { signIn } = useAuthStore();
   const navigate = useNavigate();
 
-  // SECURITY: Clear any existing session on login page mount to prevent session hijacking
+  // SECURITY: Redirect logged-in users to dashboard
   useEffect(() => {
-    const clearSession = async () => {
+    const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        // If there's an active session, clear it (user should log in fresh)
-        if (session) {
-          await supabase.auth.signOut({ scope: 'local' });
+        // If user is already logged in, redirect to dashboard
+        if (session?.user) {
+          navigate('/dashboard', { replace: true });
         }
       } catch (error) {
-        console.error('Error clearing session:', error);
+        console.error('Error checking session:', error);
       }
     };
 
-    clearSession();
-  }, []);
+    checkSession();
+  }, [navigate]);
 
   const validateForm = () => {
     const newErrors = {};

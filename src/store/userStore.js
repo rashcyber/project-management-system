@@ -144,10 +144,19 @@ const useUserStore = create((set, get) => ({
   // Invite user via email - creates account and sends password reset
   inviteUser: async (email, role = 'member', fullName = '') => {
     try {
+      // Step 0: Get current user ID to check session hijacking detection won't trigger
+      const { data: { session: adminSession } } = await supabase.auth.getSession();
+      const adminUserId = adminSession?.user?.id;
+
+      if (!adminUserId) {
+        throw new Error('You must be logged in to send invitations');
+      }
+
       // Generate a secure temporary password
       const tempPassword = crypto.randomUUID() + 'A1!';
 
       // Step 1: Create the user account with a temporary password
+      // Do NOT auto-confirm - we want to send them a reset link
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: email,
         password: tempPassword,
@@ -157,13 +166,14 @@ const useUserStore = create((set, get) => ({
             role: role,
             invited: true,
           },
+          emailRedirectTo: `${import.meta.env.VITE_APP_URL || window.location.origin}/reset-password`,
         },
       });
 
       if (signUpError) throw signUpError;
 
       // Step 2: Update the profile with the correct role
-      // This is critical - we must ensure the role is saved before sending the email
+      // This is critical - we must ensure the role is saved BEFORE we rely on it
       if (signUpData.user) {
         const { error: updateError } = await supabase
           .from('profiles')
@@ -178,27 +188,14 @@ const useUserStore = create((set, get) => ({
           throw updateError;
         }
 
-        // Add a small delay to ensure the profile update is persisted
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Add delay to ensure the update is persisted
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
-      // Step 3: Sign out the current user if this invitation created a session
-      // We don't want the inviting admin to be logged out
-      // Get the current session before signUp affected it
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-      // If we're not signed in as the invited user, we're good
-      // If we are signed in as the invited user (which shouldn't happen with signUp), sign out
-      if (currentSession?.user?.email === email) {
-        await supabase.auth.signOut({ scope: 'local' });
-      }
-
-      // Step 4: Send password reset email so user can set their own password
+      // Step 3: Send password reset email
       // Use VITE_APP_URL from env if available, otherwise fallback to window.location.origin
       const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 
-      // For invitations, redirect directly to reset-password page
-      // This avoids logging in the user automatically
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${appUrl}/reset-password`,
       });
@@ -208,8 +205,24 @@ const useUserStore = create((set, get) => ({
         // Don't throw here - account was created successfully
       }
 
+      // Step 4: Ensure admin is still logged in
+      // Refresh the admin's session to prevent session hijacking detection issues
+      const { data: { session: newAdminSession }, error: refreshError } = await supabase.auth.refreshSession();
+
+      if (!refreshError && newAdminSession?.user?.id === adminUserId) {
+        // Session is still valid for the admin
+        console.log('Admin session verified after invitation');
+      } else {
+        // Try to restore the session from storage
+        const { data: { session: storedSession } } = await supabase.auth.getSession();
+        if (!storedSession || storedSession.user.id !== adminUserId) {
+          console.warn('Admin session may have been affected by invitation');
+        }
+      }
+
       return { data: signUpData, error: null };
     } catch (error) {
+      console.error('Invitation error:', error);
       return { data: null, error };
     }
   },

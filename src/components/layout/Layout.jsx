@@ -44,7 +44,8 @@ const Layout = () => {
     const currentUserId = user.id;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      // Only check for hijacking on actual sign-ins, not token refreshes or other events
+      if (event === 'SIGNED_IN') {
         // Check if the session user has changed unexpectedly
         if (session?.user?.id && session.user.id !== currentUserId) {
           console.warn('SECURITY ALERT: Session user changed unexpectedly!', {
