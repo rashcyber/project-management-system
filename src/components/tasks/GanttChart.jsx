@@ -60,32 +60,36 @@ const GanttChart = ({ tasks, onTaskUpdate, projectId }) => {
   // Calculate task bar position and width using pixel-based positioning for perfect alignment
   const getTaskBarStyle = (task) => {
     if (!task.due_date && !task.created_at) {
-      return { left: '0px', width: '30px' };
+      return { left: '0px', width: '30px', endDate: 'N/A' };
     }
 
-    // Use due_date as the primary indicator, created_at as fallback
+    // Use due_date as the primary end indicator, created_at as start
     const taskStart = task.created_at ? new Date(task.created_at) : startDate;
     const taskEnd = task.due_date ? new Date(task.due_date) : new Date();
 
-    // Calculate exact day offsets from startDate (normalize to start of day)
+    // Normalize all dates to start of day for consistent calculations
     const startDay = new Date(taskStart);
     startDay.setHours(0, 0, 0, 0);
+
     const startDateNorm = new Date(startDate);
     startDateNorm.setHours(0, 0, 0, 0);
 
-    const startDayOffset = Math.max(0, Math.floor((startDay.getTime() - startDateNorm.getTime()) / (1000 * 60 * 60 * 24)));
-
     const endDay = new Date(taskEnd);
     endDay.setHours(0, 0, 0, 0);
-    const endDayOffset = Math.max(startDayOffset + 1, Math.floor((endDay.getTime() - startDateNorm.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+
+    // Calculate day offsets
+    const startDayOffset = Math.max(0, Math.floor((startDay.getTime() - startDateNorm.getTime()) / (1000 * 60 * 60 * 24)));
+    // End date offset: include the end date day itself (add 1)
+    const endDayOffset = Math.floor((endDay.getTime() - startDateNorm.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     // Convert to pixels (aligned to grid)
     const leftPixels = startDayOffset * cellWidth;
-    const widthPixels = Math.max((endDayOffset - startDayOffset) * cellWidth, cellWidth * 0.5);
+    const widthPixels = Math.max((endDayOffset - startDayOffset) * cellWidth, cellWidth);
 
     return {
       left: `${leftPixels}px`,
-      width: `${widthPixels}px`
+      width: `${widthPixels}px`,
+      endDate: formatDate(endDay)
     };
   };
 
@@ -276,9 +280,10 @@ const GanttChart = ({ tasks, onTaskUpdate, projectId }) => {
                       ...getTaskBarStyle(task),
                       background: getStatusColor(task.status)
                     }}
-                    title={`${task.title} - ${task.status}`}
+                    title={`${task.title}\nStatus: ${task.status}\nDue: ${getTaskBarStyle(task).endDate}`}
                   >
                     <span className="bar-label">{task.title}</span>
+                    <span className="bar-date-label">{getTaskBarStyle(task).endDate}</span>
                   </div>
                 </div>
 

@@ -296,6 +296,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.bar-date-label {
+  font-size: 0.65rem;
+  opacity: 0.9;
+  margin-left: 0.25rem;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Today indicator */
