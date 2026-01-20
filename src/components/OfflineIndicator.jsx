@@ -18,8 +18,11 @@ const OfflineIndicator = () => {
     }
   }, [isOnline, pendingActions.length]);
 
-  // Don't show indicator if online and no pending actions
-  if (isOnline && pendingActions.length === 0 && !error) {
+  // Show indicator when offline OR when syncing OR when there's an error
+  // Hide only when fully online with no pending operations
+  const shouldShow = !isOnline || syncInProgress || pendingActions.length > 0 || error;
+
+  if (!shouldShow) {
     return null;
   }
 

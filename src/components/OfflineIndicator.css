@@ -5,20 +5,22 @@
   right: 0;
   padding: 0.75rem 1rem;
   background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
-  z-index: 40;
+  border-bottom: 2px solid var(--border-color);
+  z-index: 50;
   animation: slideDown 0.3s ease-out;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .offline-indicator.offline {
-  background-color: #fef3c7;
-  border-bottom-color: #f59e0b;
+  background: linear-gradient(90deg, #fef3c7 0%, #fef08a 100%);
+  border-bottom-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
 }
 
 .offline-indicator.online {
-  background-color: #ecfdf5;
-  border-bottom-color: #10b981;
+  background: linear-gradient(90deg, #ecfdf5 0%, #d1fae5 100%);
+  border-bottom-color: #059669;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.1);
 }
 
 @keyframes slideDown {
@@ -50,11 +52,21 @@
 }
 
 .offline-indicator.offline .offline-indicator-icon {
-  color: #f59e0b;
+  color: #dc2626;
+  animation: pulse 2s ease-in-out infinite;
 }
 
 .offline-indicator.online .offline-indicator-icon {
-  color: #10b981;
+  color: #059669;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .offline-indicator-icon .spinner {
@@ -79,11 +91,13 @@
 }
 
 .offline-indicator.offline .offline-indicator-text {
-  color: #92400e;
+  color: #991b1b;
+  font-weight: 600;
 }
 
 .offline-indicator.online .offline-indicator-text {
   color: #065f46;
+  font-weight: 500;
 }
 
 .offline-indicator-text.error {
