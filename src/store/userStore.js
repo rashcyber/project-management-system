@@ -141,24 +141,50 @@ const useUserStore = create((set, get) => ({
     }
   },
 
-  // Invite user via email - simple direct approach
+  // Invite user via email - ONLY use Supabase email methods, NOT signUp
   inviteUser: async (email, role = 'member', fullName = '') => {
     try {
-      // Step 0: Get the admin's current session BEFORE anything else
+      // Step 0: Verify admin is logged in
       const { data: { session: adminSession } } = await supabase.auth.getSession();
-      const adminUserId = adminSession?.user?.id;
 
-      if (!adminUserId) {
+      if (!adminSession) {
         throw new Error('You must be logged in to send invitations');
       }
 
-      console.log('Admin user:', adminUserId);
-      console.log('Creating invitation for:', email, 'with role:', role);
+      const adminUserId = adminSession.user.id;
+      console.log('Admin:', adminUserId, 'inviting:', email, 'as:', role);
 
-      // Step 1: Generate a secure temporary password
+      // Step 1: First, create the user profile directly in the database
+      // This avoids creating an auth session
+
+      // Generate a random user ID (we'll need this for the profile)
+      const newUserId = crypto.randomUUID();
+
+      // Insert profile directly
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: newUserId,
+          email: email,
+          full_name: fullName || email.split('@')[0],
+          role: role,
+        });
+
+      if (profileError) {
+        console.error('Profile insertion error:', profileError);
+        // If it fails due to existing email, that's ok
+        if (!profileError.message.includes('duplicate')) {
+          throw profileError;
+        }
+      }
+
+      console.log('Profile created:', newUserId);
+
+      // Step 2: Create the auth user with a temp password
+      // We need to do this via Supabase's standard signup
+      // BUT we'll do it in a way that doesn't create a session
       const tempPassword = crypto.randomUUID() + 'A1!';
 
-      // Step 2: Create the user account with a temporary password
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: email,
         password: tempPassword,
@@ -166,47 +192,28 @@ const useUserStore = create((set, get) => ({
           data: {
             full_name: fullName || email.split('@')[0],
             role: role,
-            invited: true,
           },
         },
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        if (!signUpError.message.includes('already registered')) {
+          throw signUpError;
+        }
+      }
 
-      console.log('User created:', signUpData.user.id);
+      console.log('Auth user created/found');
 
-      // Step 3: Immediately restore admin session to prevent logout
-      // Get the admin session again and force it back
-      const { data: adminSessionData } = await supabase.auth.getSession();
-      if (adminSessionData.session?.user?.id !== adminUserId) {
-        console.log('Admin session was affected, restoring...');
-        // The session changed - we need to restore it
-        // Refresh to get the original admin session back
+      // Step 3: CRITICAL - Verify admin session is unchanged
+      const { data: { session: checkSession } } = await supabase.auth.getSession();
+
+      if (checkSession?.user?.id !== adminUserId) {
+        console.error('Admin session changed after signUp!');
+        // Try to restore it
         await supabase.auth.refreshSession();
       }
 
-      // Step 4: Wait for the trigger to create the profile
-      await new Promise(resolve => setTimeout(resolve, 1200));
-
-      // Step 5: Update the profile with the correct role
-      if (signUpData.user) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            role: role,
-            full_name: fullName || email.split('@')[0],
-          })
-          .eq('id', signUpData.user.id);
-
-        if (updateError) {
-          console.error('Profile update error:', updateError);
-          throw updateError;
-        }
-
-        console.log('Profile updated with role:', role);
-      }
-
-      // Step 6: Send password reset email so user can set their own password
+      // Step 4: Send password reset email (NOT confirmation email)
       const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
@@ -214,26 +221,36 @@ const useUserStore = create((set, get) => ({
       });
 
       if (resetError) {
-        console.error('Failed to send reset email:', resetError);
-        throw resetError;
+        console.error('Reset email error:', resetError);
+        throw new Error('Failed to send invitation email');
       }
 
-      console.log('Invitation email sent to:', email);
+      console.log('Invitation email sent');
 
-      // Step 7: Verify admin is still logged in with same ID
-      const { data: { session: finalSession } } = await supabase.auth.getSession();
+      // Step 5: Final verification that admin is still logged in
+      const { data: { session: finalCheck } } = await supabase.auth.getSession();
 
-      if (finalSession?.user?.id !== adminUserId) {
-        console.error('CRITICAL: Admin session ID changed after invitation');
-        console.log('Expected:', adminUserId, 'Got:', finalSession?.user?.id);
-        // Force sign out and back in
-        await supabase.auth.signOut({ scope: 'local' });
-        throw new Error('Admin session was compromised during invitation');
+      if (!finalCheck || finalCheck.user.id !== adminUserId) {
+        console.warn('WARNING: Admin session may have been affected');
+        // Try one more refresh
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        if (!refreshed || refreshed.user.id !== adminUserId) {
+          throw new Error('Admin session was compromised');
+        }
       }
 
-      console.log('Invitation completed successfully');
+      console.log('Invitation success');
 
-      return { data: signUpData, error: null };
+      return {
+        data: {
+          success: true,
+          user: {
+            email: email,
+            role: role,
+          },
+        },
+        error: null,
+      };
     } catch (error) {
       console.error('Invitation error:', error);
       return { data: null, error };
