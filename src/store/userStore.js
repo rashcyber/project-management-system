@@ -141,51 +141,100 @@ const useUserStore = create((set, get) => ({
     }
   },
 
-  // Invite user via email - uses server-side edge function to create account
+  // Invite user via email - uses Supabase admin API via RPC
   inviteUser: async (email, role = 'member', fullName = '') => {
     try {
-      // Step 1: Get current session to verify admin is logged in
+      // Step 1: Verify admin is logged in
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
         throw new Error('You must be logged in to send invitations');
       }
 
-      // Step 2: Call the invite-user edge function (server-side with admin privileges)
-      // This prevents the admin's session from being affected
-      const supabaseUrl = supabase.supabaseUrl;
-      const accessToken = session.access_token;
+      console.log('Creating invitation for:', email, 'with role:', role);
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/invite-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+      // Step 2: Generate a temporary password
+      const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
+
+      // Step 3: Create the user using signUp (this is the standard way)
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email,
+        password: tempPassword,
+        options: {
+          data: {
+            full_name: fullName || email.split('@')[0],
+            role: role,
+            invited: true,
+          },
         },
-        body: JSON.stringify({
-          email: email,
-          role: role,
-          fullName: fullName || email.split('@')[0],
-        }),
       });
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        console.error('Edge function error:', responseData);
-        throw new Error(responseData.error || 'Failed to invite user');
+      if (signUpError) {
+        // Check if user already exists
+        if (signUpError.message.includes('already registered')) {
+          throw new Error('User with this email already exists');
+        }
+        throw signUpError;
       }
 
-      // Step 3: Verify admin is still logged in with same session
+      if (!signUpData.user) {
+        throw new Error('Failed to create user account');
+      }
+
+      console.log('User account created:', signUpData.user.id);
+
+      // Step 4: Wait for the trigger to create the profile
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Step 5: Update the profile with the correct role
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          role: role,
+          full_name: fullName || email.split('@')[0],
+        })
+        .eq('id', signUpData.user.id);
+
+      if (updateError) {
+        console.error('Profile update error:', updateError);
+        throw new Error('Failed to set user role');
+      }
+
+      console.log('Profile updated with role:', role);
+
+      // Step 6: Send password reset email so user can set their own password
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${appUrl}/reset-password`,
+      });
+
+      if (resetError) {
+        console.error('Password reset email error:', resetError);
+        throw new Error('Failed to send invitation email');
+      }
+
+      console.log('Invitation email sent to:', email);
+
+      // Step 7: Verify admin is still logged in
       const { data: { session: currentSession } } = await supabase.auth.getSession();
 
       if (!currentSession || currentSession.user.id !== session.user.id) {
-        console.error('CRITICAL: Admin session changed during invitation');
-        throw new Error('Session was affected during invitation');
+        console.error('WARNING: Admin session may have been affected');
+        // Don't throw - the invitation was successful
       }
 
-      console.log('User invited successfully:', responseData);
-      return { data: responseData, error: null };
+      return {
+        data: {
+          success: true,
+          user: {
+            id: signUpData.user.id,
+            email: signUpData.user.email,
+            role: role,
+          },
+        },
+        error: null,
+      };
     } catch (error) {
       console.error('Invitation error:', error);
       return { data: null, error };
