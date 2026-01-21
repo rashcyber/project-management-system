@@ -141,22 +141,24 @@ const useUserStore = create((set, get) => ({
     }
   },
 
-  // Invite user via email - uses Supabase admin API via RPC
+  // Invite user via email - simple direct approach
   inviteUser: async (email, role = 'member', fullName = '') => {
     try {
-      // Step 1: Verify admin is logged in
-      const { data: { session } } = await supabase.auth.getSession();
+      // Step 0: Get the admin's current session BEFORE anything else
+      const { data: { session: adminSession } } = await supabase.auth.getSession();
+      const adminUserId = adminSession?.user?.id;
 
-      if (!session) {
+      if (!adminUserId) {
         throw new Error('You must be logged in to send invitations');
       }
 
+      console.log('Admin user:', adminUserId);
       console.log('Creating invitation for:', email, 'with role:', role);
 
-      // Step 2: Generate a temporary password
-      const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
+      // Step 1: Generate a secure temporary password
+      const tempPassword = crypto.randomUUID() + 'A1!';
 
-      // Step 3: Create the user using signUp (this is the standard way)
+      // Step 2: Create the user account with a temporary password
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: email,
         password: tempPassword,
@@ -169,38 +171,40 @@ const useUserStore = create((set, get) => ({
         },
       });
 
-      if (signUpError) {
-        // Check if user already exists
-        if (signUpError.message.includes('already registered')) {
-          throw new Error('User with this email already exists');
-        }
-        throw signUpError;
-      }
+      if (signUpError) throw signUpError;
 
-      if (!signUpData.user) {
-        throw new Error('Failed to create user account');
-      }
+      console.log('User created:', signUpData.user.id);
 
-      console.log('User account created:', signUpData.user.id);
+      // Step 3: Immediately restore admin session to prevent logout
+      // Get the admin session again and force it back
+      const { data: adminSessionData } = await supabase.auth.getSession();
+      if (adminSessionData.session?.user?.id !== adminUserId) {
+        console.log('Admin session was affected, restoring...');
+        // The session changed - we need to restore it
+        // Refresh to get the original admin session back
+        await supabase.auth.refreshSession();
+      }
 
       // Step 4: Wait for the trigger to create the profile
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1200));
 
       // Step 5: Update the profile with the correct role
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          role: role,
-          full_name: fullName || email.split('@')[0],
-        })
-        .eq('id', signUpData.user.id);
+      if (signUpData.user) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            role: role,
+            full_name: fullName || email.split('@')[0],
+          })
+          .eq('id', signUpData.user.id);
 
-      if (updateError) {
-        console.error('Profile update error:', updateError);
-        throw new Error('Failed to set user role');
+        if (updateError) {
+          console.error('Profile update error:', updateError);
+          throw updateError;
+        }
+
+        console.log('Profile updated with role:', role);
       }
-
-      console.log('Profile updated with role:', role);
 
       // Step 6: Send password reset email so user can set their own password
       const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
@@ -210,31 +214,26 @@ const useUserStore = create((set, get) => ({
       });
 
       if (resetError) {
-        console.error('Password reset email error:', resetError);
-        throw new Error('Failed to send invitation email');
+        console.error('Failed to send reset email:', resetError);
+        throw resetError;
       }
 
       console.log('Invitation email sent to:', email);
 
-      // Step 7: Verify admin is still logged in
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      // Step 7: Verify admin is still logged in with same ID
+      const { data: { session: finalSession } } = await supabase.auth.getSession();
 
-      if (!currentSession || currentSession.user.id !== session.user.id) {
-        console.error('WARNING: Admin session may have been affected');
-        // Don't throw - the invitation was successful
+      if (finalSession?.user?.id !== adminUserId) {
+        console.error('CRITICAL: Admin session ID changed after invitation');
+        console.log('Expected:', adminUserId, 'Got:', finalSession?.user?.id);
+        // Force sign out and back in
+        await supabase.auth.signOut({ scope: 'local' });
+        throw new Error('Admin session was compromised during invitation');
       }
 
-      return {
-        data: {
-          success: true,
-          user: {
-            id: signUpData.user.id,
-            email: signUpData.user.email,
-            role: role,
-          },
-        },
-        error: null,
-      };
+      console.log('Invitation completed successfully');
+
+      return { data: signUpData, error: null };
     } catch (error) {
       console.error('Invitation error:', error);
       return { data: null, error };
