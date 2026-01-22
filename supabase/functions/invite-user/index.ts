@@ -1,10 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import * as jwt from "https://esm.sh/jsonwebtoken@9"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-const SUPABASE_JWT_SECRET = Deno.env.get("SUPABASE_JWT_SECRET") || ""
 const APP_URL = Deno.env.get("APP_URL") || "https://project-management-system-ten-eta.vercel.app"
 
 // CORS headers
@@ -48,27 +46,9 @@ serve(async (req) => {
     }
 
     const token = authHeader.substring(7) // Remove "Bearer " prefix
-    console.log("🔐 Validating token...")
+    console.log("🔐 Validating token with Supabase...")
 
-    // Verify the JWT token
-    let decodedToken: any
-    try {
-      decodedToken = jwt.verify(token, SUPABASE_JWT_SECRET, {
-        algorithms: ["HS256"],
-      })
-      console.log("✅ Token verified, user ID:", decodedToken.sub)
-    } catch (error) {
-      console.error("❌ Token verification failed:", error)
-      return new Response(
-        JSON.stringify({ error: "Unauthorized: Invalid token" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      )
-    }
-
-    // Create client to check user's role
+    // Create admin client with service role
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         autoRefreshToken: false,
@@ -76,11 +56,40 @@ serve(async (req) => {
       },
     })
 
+    // Create a user client with the provided token to verify it's valid
+    const supabaseUser = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    })
+
+    // Get the user from the token to extract their ID
+    const { data: { user: currentUser }, error: userError } = await supabaseUser.auth.getUser()
+
+    if (userError || !currentUser) {
+      console.error("❌ Could not validate token:", userError)
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid or expired token" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    console.log("✅ Token validated, user ID:", currentUser.id)
+
     // Check if user is an admin
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("role")
-      .eq("id", decodedToken.sub)
+      .eq("id", currentUser.id)
       .single()
 
     if (profileError || !userProfile) {
