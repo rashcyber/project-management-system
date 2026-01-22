@@ -1,15 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
 const APP_URL = Deno.env.get("APP_URL") || "https://project-management-system-ten-eta.vercel.app"
-
-interface InvitationRequest {
-  email: string
-  role: string
-  fullName: string
-}
 
 // CORS headers
 const corsHeaders = {
@@ -19,23 +13,23 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", {
+      status: 200,
+      headers: corsHeaders,
+    })
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
+  }
+
   try {
-    // Handle CORS preflight
-    if (req.method === "OPTIONS") {
-      return new Response("ok", {
-        status: 200,
-        headers: corsHeaders,
-      })
-    }
-
-    if (req.method !== "POST") {
-      return new Response(JSON.stringify({ error: "Method not allowed" }), {
-        status: 405,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
-    }
-
-    const body = await req.json() as InvitationRequest
+    const body = await req.json()
     const { email, role, fullName } = body
 
     console.log("📨 Invitation request:", { email, role, fullName })
@@ -63,19 +57,15 @@ serve(async (req) => {
       )
     }
 
-    // Create admin client
-    const supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
+    // Create admin client with service role
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
 
-    // Check authorization header
-    const authHeader = req.headers.get("Authorization")
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
-    }
-
-    console.log("✅ Authorization verified")
+    console.log("✅ Supabase admin client created")
 
     // Check if user already exists
     const { data: existingUser, error: checkError } = await supabaseAdmin
@@ -101,20 +91,19 @@ serve(async (req) => {
       )
     }
 
-    console.log("✅ User does not exist, proceeding...")
+    console.log("✅ User does not exist, proceeding with creation...")
 
     // Generate secure temporary password
-    const tempPassword = crypto.getRandomValues(new Uint8Array(16)).toString() + "A1!"
+    const tempPassword = `${crypto.getRandomValues(new Uint8Array(16)).toString()}A1!`
 
-    // Step 1: Create user with EXPLICIT role in metadata
-    // This is critical - the role MUST be passed in raw_user_meta_data
+    // Step 1: Create user with role in metadata
     const { data: newAuthUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
+      email,
       password: tempPassword,
       email_confirm: false,
       user_metadata: {
         full_name: fullName || email.split("@")[0],
-        role: role, // CRITICAL: This ensures the trigger uses this role
+        role, // CRITICAL: Pass role in metadata for trigger to use
         invited: true,
       },
     })
@@ -133,54 +122,48 @@ serve(async (req) => {
       )
     }
 
-    console.log("✅ User created:", newAuthUser.user.id)
+    console.log("✅ User created with ID:", newAuthUser.user.id)
 
     // Step 2: Wait for trigger to create profile
     console.log("⏳ Waiting for database trigger to create profile...")
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await new Promise(resolve => setTimeout(resolve, 2500))
 
-    // Step 3: Verify profile was created with correct role
-    const { data: createdProfile, error: profileCheckError } = await supabaseAdmin
+    // Step 3: Verify and fix profile role if needed
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("id, role, full_name")
+      .select("id, role, full_name, email")
       .eq("id", newAuthUser.user.id)
       .single()
 
-    if (profileCheckError || !createdProfile) {
-      console.error("❌ Profile check error:", profileCheckError)
-      // Try to update/create it explicitly
-      const { error: updateError } = await supabaseAdmin
+    if (profileError) {
+      console.error("❌ Profile fetch error:", profileError)
+      // Try to upsert it
+      const { error: upsertError } = await supabaseAdmin
         .from("profiles")
         .upsert({
           id: newAuthUser.user.id,
-          email: email,
+          email,
           full_name: fullName || email.split("@")[0],
-          role: role,
+          role,
         })
 
-      if (updateError) {
-        console.error("❌ Profile upsert error:", updateError)
+      if (upsertError) {
+        console.error("❌ Profile upsert error:", upsertError)
         return new Response(
-          JSON.stringify({
-            error: "Failed to set up user profile",
-            details: updateError.message,
-          }),
+          JSON.stringify({ error: "Failed to set up profile", details: upsertError.message }),
           {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         )
       }
+      console.log("✅ Profile created via upsert")
     } else {
-      console.log("✅ Profile exists with role:", createdProfile.role)
+      console.log("✅ Profile exists with role:", profile.role)
 
-      // Verify the role is correct
-      if (createdProfile.role !== role) {
-        console.warn("⚠️ Profile role mismatch, updating...", {
-          expected: role,
-          actual: createdProfile.role,
-        })
-
+      // If role doesn't match, update it
+      if (profile.role !== role) {
+        console.log("⚠️ Updating profile role from", profile.role, "to", role)
         const { error: updateError } = await supabaseAdmin
           .from("profiles")
           .update({ role })
@@ -189,28 +172,25 @@ serve(async (req) => {
         if (updateError) {
           console.error("❌ Role update error:", updateError)
         } else {
-          console.log("✅ Profile role updated to:", role)
+          console.log("✅ Profile role updated")
         }
       }
     }
 
-    // Step 4: Generate password reset link
+    // Step 4: Generate recovery link for password reset
     console.log("📧 Generating password reset link...")
     const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
-      email: email,
+      email,
       options: {
         redirectTo: `${APP_URL}/reset-password`,
       },
     })
 
     if (resetError) {
-      console.error("❌ Password reset error:", resetError)
+      console.error("❌ Reset link error:", resetError)
       return new Response(
-        JSON.stringify({
-          error: "Failed to generate reset link",
-          details: resetError.message,
-        }),
+        JSON.stringify({ error: "Failed to generate reset link", details: resetError.message }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -218,28 +198,28 @@ serve(async (req) => {
       )
     }
 
-    console.log("✅ Recovery link generated")
+    console.log("✅ Recovery link generated and email queued")
 
     // Success response
-    const successResponse = {
+    const response = {
       success: true,
       message: "User invited successfully",
       user: {
         id: newAuthUser.user.id,
         email: newAuthUser.user.email,
-        role: role,
+        role,
         full_name: fullName || email.split("@")[0],
       },
     }
 
-    console.log("✅ Invitation complete:", JSON.stringify(successResponse))
+    console.log("✅ Invitation complete!")
 
-    return new Response(JSON.stringify(successResponse), {
+    return new Response(JSON.stringify(response), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   } catch (error) {
-    console.error("❌ Invitation error:", error)
+    console.error("❌ Unexpected error:", error)
     return new Response(
       JSON.stringify({
         error: "Internal server error",

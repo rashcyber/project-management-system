@@ -164,24 +164,32 @@ const useUserStore = create((set, get) => ({
 
       console.log('🔄 Calling invite-user edge function...');
 
+      const requestBody = {
+        email,
+        role,
+        fullName: fullName || email.split('@')[0],
+      };
+
+      console.log('📤 Sending request to:', `${supabaseUrl}/functions/v1/invite-user`);
+      console.log('📦 Request body:', requestBody);
+
       const response = await fetch(`${supabaseUrl}/functions/v1/invite-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          email,
-          role,
-          fullName: fullName || email.split('@')[0],
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log('📥 Response status:', response.status);
+
       const responseData = await response.json();
+      console.log('📥 Response data:', responseData);
 
       if (!response.ok) {
-        console.error('❌ Edge function error:', responseData);
-        throw new Error(responseData.error || 'Failed to invite user');
+        console.error('❌ Edge function error (status ' + response.status + '):', responseData);
+        throw new Error(responseData.error || `Failed to invite user (HTTP ${response.status})`);
       }
 
       console.log('✅ User invited successfully:', responseData);
