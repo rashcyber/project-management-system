@@ -25,22 +25,20 @@ const ResetPassword = () => {
       try {
         // Get recovery params from URL hash
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const type = hashParams.get('type');
         const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
 
-        console.log('ResetPassword - Checking recovery session:', {
+        console.log('ResetPassword - Checking for recovery token:', {
           type,
           hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-          hashLength: window.location.hash.length
         });
 
         // If we have tokens in the URL (recovery or invitation), set the session
-        if (accessToken && refreshToken) {
-          console.log('Recovery/Invitation tokens found in URL, setting session...');
+        if (type === 'recovery' && accessToken) {
+          console.log('Recovery token found in URL, setting session...');
 
           // Manually set the session with the tokens from the URL
+          const refreshToken = hashParams.get('refresh_token') || '';
           const { error: setSessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -48,23 +46,18 @@ const ResetPassword = () => {
 
           if (setSessionError) {
             console.error('Failed to set session:', setSessionError);
-            // Token might be expired or invalid
             setIsCheckingSession(false);
             setIsValidSession(false);
             return;
           }
 
-          console.log('Session set successfully from tokens');
-
-          // Add delay to ensure session is properly established
-          await new Promise(resolve => setTimeout(resolve, 100));
-
+          console.log('Session set successfully from recovery token');
           setIsValidSession(true);
           setIsCheckingSession(false);
           return;
         }
 
-        // If tokens not in URL, check current session
+        // Check if we already have a valid session
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
@@ -92,8 +85,7 @@ const ResetPassword = () => {
     };
 
     // Delay to ensure Supabase auth is initialized properly
-    // Recovery/Invitation tokens expire after 1 hour
-    const timeoutId = setTimeout(checkSession, 800);
+    const timeoutId = setTimeout(checkSession, 500);
 
     return () => clearTimeout(timeoutId);
   }, []);
