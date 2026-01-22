@@ -3,7 +3,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-const APP_URL = Deno.env.get("APP_URL") || "https://project-management-system-ten-eta.vercel.app"
 
 // CORS headers
 const corsHeaders = {
@@ -30,14 +29,14 @@ serve(async (req) => {
 
   try {
     const body = await req.json()
-    const { email, role, fullName } = body
+    const { email, role, fullName, inviter_workspace_id } = body
 
-    console.log("📨 Invitation request:", { email, role, fullName })
+    console.log("📨 Invitation request:", { email, role, fullName, inviter_workspace_id })
 
     // Validate input
-    if (!email || !role) {
+    if (!email || !role || !inviter_workspace_id) {
       return new Response(
-        JSON.stringify({ error: "Email and role are required" }),
+        JSON.stringify({ error: "Email, role, and inviter_workspace_id are required" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -67,10 +66,10 @@ serve(async (req) => {
 
     console.log("✅ Supabase admin client created")
 
-    // Check if user already exists in profiles
+    // Check if user already exists in profiles by email
     const { data: existingProfile, error: checkError } = await supabaseAdmin
       .from("profiles")
-      .select("id, email")
+      .select("id, email, role")
       .eq("email", email)
       .maybeSingle()
 
@@ -96,16 +95,12 @@ serve(async (req) => {
     // Generate secure temporary password
     const tempPassword = `Temp${Math.random().toString(36).slice(-12)}A1!`
 
-    // Step 1: Create user with role in metadata
+    // Step 1: Create auth user without complex metadata
+    console.log("📝 Creating auth user...")
     const { data: newAuthUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: tempPassword,
       email_confirm: false,
-      user_metadata: {
-        full_name: fullName || email.split("@")[0],
-        role,
-        invited: true,
-      },
     })
 
     if (createError || !newAuthUser?.user) {
@@ -122,75 +117,40 @@ serve(async (req) => {
       )
     }
 
-    console.log("✅ User created with ID:", newAuthUser.user.id)
+    const newUserId = newAuthUser.user.id
+    console.log("✅ Auth user created with ID:", newUserId)
 
-    // Step 2: Wait for trigger to create profile
-    console.log("⏳ Waiting for database trigger to create profile...")
-    await new Promise(resolve => setTimeout(resolve, 2500))
+    // Step 2: Wait briefly for trigger to potentially create profile
+    console.log("⏳ Waiting for database trigger...")
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
-    // Step 3: Verify and fix profile role if needed
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // Step 3: Directly upsert profile with correct role and workspace
+    // This ensures the invited user gets the correct role, not super_admin
+    console.log("📝 Upserting profile with role:", role, "and workspace:", inviter_workspace_id)
+    const { data: upsertedProfile, error: upsertError } = await supabaseAdmin
       .from("profiles")
-      .select("id, role, full_name, email")
-      .eq("id", newAuthUser.user.id)
-      .single()
-
-    if (profileError) {
-      console.error("❌ Profile fetch error:", profileError)
-      // Try to upsert it
-      const { error: upsertError } = await supabaseAdmin
-        .from("profiles")
-        .upsert({
-          id: newAuthUser.user.id,
+      .upsert(
+        {
+          id: newUserId,
           email,
           full_name: fullName || email.split("@")[0],
           role,
-        })
+          workspace_id: inviter_workspace_id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      )
+      .select()
+      .single()
 
-      if (upsertError) {
-        console.error("❌ Profile upsert error:", upsertError)
-        return new Response(
-          JSON.stringify({ error: "Failed to set up profile", details: upsertError.message }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        )
-      }
-      console.log("✅ Profile created via upsert")
-    } else {
-      console.log("✅ Profile exists with role:", profile.role)
-
-      // If role doesn't match, update it
-      if (profile.role !== role) {
-        console.log("⚠️ Updating profile role from", profile.role, "to", role)
-        const { error: updateError } = await supabaseAdmin
-          .from("profiles")
-          .update({ role })
-          .eq("id", newAuthUser.user.id)
-
-        if (updateError) {
-          console.error("❌ Role update error:", updateError)
-        } else {
-          console.log("✅ Profile role updated")
-        }
-      }
-    }
-
-    // Step 4: Generate recovery link for password reset
-    console.log("📧 Generating password reset link...")
-    const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: {
-        redirectTo: `${APP_URL}/reset-password`,
-      },
-    })
-
-    if (resetError) {
-      console.error("❌ Reset link error:", resetError)
+    if (upsertError) {
+      console.error("❌ Profile upsert error:", upsertError)
       return new Response(
-        JSON.stringify({ error: "Failed to generate reset link", details: resetError.message }),
+        JSON.stringify({
+          error: "Failed to set up profile",
+          details: upsertError.message,
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -198,21 +158,40 @@ serve(async (req) => {
       )
     }
 
-    console.log("✅ Recovery link generated and email queued")
+    console.log("✅ Profile created/updated with role:", upsertedProfile.role)
+
+    // Step 4: Generate recovery link for password reset (this triggers the password reset email)
+    console.log("📧 Generating password reset link...")
+    const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: {
+        redirectTo: `${Deno.env.get("APP_URL") || "http://localhost:5173"}/reset-password`,
+      },
+    })
+
+    if (resetError) {
+      console.error("❌ Reset link error:", resetError)
+      // Don't fail completely - user was created
+      console.warn("⚠️ Warning: Password reset link generation failed, but user was created")
+    } else {
+      console.log("✅ Password reset link generated (email will be sent by Supabase)")
+    }
 
     // Success response
     const response = {
       success: true,
       message: "User invited successfully",
       user: {
-        id: newAuthUser.user.id,
-        email: newAuthUser.user.email,
-        role,
-        full_name: fullName || email.split("@")[0],
+        id: newUserId,
+        email: email,
+        role: upsertedProfile.role,
+        full_name: upsertedProfile.full_name,
+        workspace_id: upsertedProfile.workspace_id,
       },
     }
 
-    console.log("✅ Invitation complete!")
+    console.log("✅ Invitation process complete!")
 
     return new Response(JSON.stringify(response), {
       status: 200,

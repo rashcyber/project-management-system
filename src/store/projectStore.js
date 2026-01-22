@@ -14,7 +14,7 @@ const useProjectStore = create((set, get) => ({
 
   setCurrentProject: (project) => set({ currentProject: project }),
 
-  // Fetch all projects for current user with role-based filtering and offline support
+  // Fetch all projects for current user with workspace filtering and role-based filtering
   fetchProjects: async () => {
     set({ loading: true, error: null });
     try {
@@ -46,27 +46,30 @@ const useProjectStore = create((set, get) => ({
         `)
         .order('created_at', { ascending: false });
 
-      // SECURITY: Apply role-based project filtering for multi-team isolation
+      // SECURITY: Apply workspace and role-based filtering
       let { data, error } = await query;
 
       if (error) throw error;
 
-      // Filter projects based on role (client-side since Supabase filtering on nested tables is complex)
+      // Filter projects based on role and workspace (client-side)
       let filteredProjects = data || [];
 
       if (profile?.role === 'super_admin') {
-        // Super Admin: See ALL projects
+        // Super Admin: See ALL projects (across all workspaces or in their workspace)
+        // Can be restricted to workspace if desired: filter by profile?.workspace_id
         filteredProjects = data || [];
       } else if (profile?.role === 'admin') {
-        // Admin: Projects they own OR are members of
+        // Admin: Projects they own OR are members of (in their workspace)
         filteredProjects = (data || []).filter(project =>
-          project.owner_id === user.id ||
-          project.project_members?.some(member => member.user_id === user.id)
+          (project.owner_id === user.id ||
+           project.project_members?.some(member => member.user_id === user.id)) &&
+          project.workspace_id === profile?.workspace_id
         );
       } else {
-        // Member/Manager: ONLY projects they're members of
+        // Member/Manager: ONLY projects they're members of (in their workspace)
         filteredProjects = (data || []).filter(project =>
-          project.project_members?.some(member => member.user_id === user.id)
+          project.project_members?.some(member => member.user_id === user.id) &&
+          project.workspace_id === profile?.workspace_id
         );
       }
 
@@ -143,13 +146,14 @@ const useProjectStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const { profile } = useAuthStore.getState();
       const isOnline = useOfflineStore.getState().isOnline;
 
       // If offline, queue the action
       if (!isOnline) {
         console.log('[OFFLINE] Queueing project creation');
         const actionId = useOfflineStore.getState().queueAction('create_project', {
-          projectData: { ...projectData, owner_id: user.id },
+          projectData: { ...projectData, owner_id: user.id, workspace_id: profile?.workspace_id },
           userId: user.id,
         });
 
@@ -158,6 +162,7 @@ const useProjectStore = create((set, get) => ({
           ...projectData,
           id: actionId, // Use action ID as temporary ID
           owner_id: user.id,
+          workspace_id: profile?.workspace_id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           offline: true, // Mark as offline
@@ -184,6 +189,7 @@ const useProjectStore = create((set, get) => ({
         .insert({
           ...projectData,
           owner_id: user.id,
+          workspace_id: profile?.workspace_id,
         })
         .select()
         .single();

@@ -145,7 +145,9 @@ const UserManagement = () => {
       <div className="page-header">
         <div>
           <h1>User Management</h1>
-          <p>Manage users and their roles in the system</p>
+          <p>
+            Manage users and their roles{profile?.workspace_id ? ` in your workspace` : ''}
+          </p>
         </div>
         <Button variant="primary" onClick={() => setShowInviteModal(true)}>
           <UserPlus size={18} />
