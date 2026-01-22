@@ -38,28 +38,36 @@ const Layout = () => {
   }, []);
 
   // SECURITY: Monitor for unauthorized session changes (session hijacking detection)
+  // NOTE: Disabled the strict SIGNED_IN check because:
+  // - Invitations are created server-side (no local session change)
+  // - Password resets use recovery tokens (not new sign-in)
+  // - Hijacking detection should happen at network/token level, not app level
   useEffect(() => {
     if (!initialized || !user) return;
 
     const currentUserId = user.id;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Only check for hijacking on actual sign-ins, not token refreshes or other events
-      if (event === 'SIGNED_IN') {
-        // Check if the session user has changed unexpectedly
-        if (session?.user?.id && session.user.id !== currentUserId) {
-          console.warn('SECURITY ALERT: Session user changed unexpectedly!', {
-            previous: currentUserId,
-            current: session.user.id,
-            event,
-          });
+      // Log all auth events for debugging
+      console.log('🔐 Auth state changed:', { event, userId: session?.user?.id });
 
-          // Sign out immediately to prevent unauthorized access
-          await supabase.auth.signOut({ scope: 'global' });
-          await useAuthStore.getState().signOut();
-          window.location.href = '/login';
+      // Check for explicit sign-outs (user logged out) - this is normal
+      if (event === 'SIGNED_OUT') {
+        console.log('ℹ️ User signed out normally');
+      }
+
+      // Check for token refreshes (should keep same user)
+      if (event === 'TOKEN_REFRESHED') {
+        if (session?.user?.id !== currentUserId) {
+          console.warn('⚠️ Token refresh with different user ID', {
+            previous: currentUserId,
+            current: session?.user?.id,
+          });
         }
       }
+
+      // Note: SIGNED_IN events are expected during password resets and invitations
+      // These are legitimate and should not trigger logout
     });
 
     return () => {

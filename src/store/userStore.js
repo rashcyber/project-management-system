@@ -141,81 +141,64 @@ const useUserStore = create((set, get) => ({
     }
   },
 
-  // Invite user via email - direct client-side approach (simple and reliable)
+  // Invite user via email - uses server-side edge function
+  // This approach does NOT create a competing auth session
   inviteUser: async (email, role = 'member', fullName = '') => {
     try {
-      console.log('Inviting user:', email, 'with role:', role);
+      console.log('📨 Inviting user:', { email, role, fullName });
 
-      // Generate a secure temporary password
-      const tempPassword = crypto.randomUUID() + 'A1!';
+      // Get current admin session for authorization
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      // Step 1: Create the user account with a temporary password
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: email,
-        password: tempPassword,
-        options: {
-          data: {
-            full_name: fullName || email.split('@')[0],
-            role: role,
-            invited: true,
-          },
+      if (sessionError || !session) {
+        throw new Error('You must be logged in to invite users');
+      }
+
+      const adminUserId = session.user.id;
+      console.log('✅ Admin verified:', adminUserId);
+
+      // Call the server-side invite-user edge function
+      // This creates the user on the server without affecting the admin's session
+      const supabaseUrl = supabase.supabaseUrl;
+      const accessToken = session.access_token;
+
+      console.log('🔄 Calling invite-user edge function...');
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
+        body: JSON.stringify({
+          email,
+          role,
+          fullName: fullName || email.split('@')[0],
+        }),
       });
 
-      if (signUpError) throw signUpError;
+      const responseData = await response.json();
 
-      if (!signUpData.user) {
-        throw new Error('Failed to create user account');
+      if (!response.ok) {
+        console.error('❌ Edge function error:', responseData);
+        throw new Error(responseData.error || 'Failed to invite user');
       }
 
-      console.log('User account created:', signUpData.user.id);
+      console.log('✅ User invited successfully:', responseData);
 
-      // Step 2: Wait for the database trigger to create the profile
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Verify admin is still logged in with same session
+      const { data: { session: currentSession }, error: verifyError } = await supabase.auth.getSession();
 
-      // Step 3: Update the profile with the correct role
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          role: role,
-          full_name: fullName || email.split('@')[0],
-        })
-        .eq('id', signUpData.user.id);
-
-      if (updateError) {
-        console.error('Profile update error:', updateError);
-        throw new Error('Failed to set user role');
+      if (verifyError || !currentSession || currentSession.user.id !== adminUserId) {
+        console.error('⚠️ WARNING: Admin session changed unexpectedly!');
+        // Don't throw - the invitation was successful server-side
+      } else {
+        console.log('✅ Admin session preserved');
       }
 
-      console.log('Profile updated with role:', role);
-
-      // Step 4: Send password reset email so user can set their own password
-      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${appUrl}/reset-password`,
-      });
-
-      if (resetError) {
-        console.error('Password reset email error:', resetError);
-        throw new Error('Failed to send invitation email. Please try again.');
-      }
-
-      console.log('Invitation email sent to:', email);
-
-      return {
-        data: {
-          success: true,
-          user: {
-            id: signUpData.user.id,
-            email: signUpData.user.email,
-            role: role,
-          },
-        },
-        error: null,
-      };
+      return { data: responseData, error: null };
     } catch (error) {
-      console.error('Invitation error:', error);
+      console.error('❌ Invitation error:', error);
       return { data: null, error };
     }
   },

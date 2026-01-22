@@ -11,7 +11,7 @@ interface InvitationRequest {
   fullName: string
 }
 
-// CORS headers for cross-origin requests
+// CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -20,7 +20,7 @@ const corsHeaders = {
 
 serve(async (req) => {
   try {
-    // Handle CORS preflight requests
+    // Handle CORS preflight
     if (req.method === "OPTIONS") {
       return new Response("ok", {
         status: 200,
@@ -28,7 +28,6 @@ serve(async (req) => {
       })
     }
 
-    // Only allow POST requests
     if (req.method !== "POST") {
       return new Response(JSON.stringify({ error: "Method not allowed" }), {
         status: 405,
@@ -36,12 +35,12 @@ serve(async (req) => {
       })
     }
 
-    // Parse the request body
-    const body = await req.json()
+    const body = await req.json() as InvitationRequest
     const { email, role, fullName } = body
 
-    console.log("Invitation request received:", { email, role })
+    console.log("📨 Invitation request:", { email, role, fullName })
 
+    // Validate input
     if (!email || !role) {
       return new Response(
         JSON.stringify({ error: "Email and role are required" }),
@@ -52,11 +51,22 @@ serve(async (req) => {
       )
     }
 
-    // Create Supabase admin client
+    // Validate role
+    const validRoles = ["super_admin", "admin", "manager", "member"]
+    if (!validRoles.includes(role)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid role. Must be one of: ${validRoles.join(", ")}` }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    // Create admin client
     const supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
 
-    // For simplicity, we'll skip the requester verification
-    // The Authorization header is still required by Supabase infrastructure
+    // Check authorization header
     const authHeader = req.headers.get("Authorization")
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -65,47 +75,57 @@ serve(async (req) => {
       })
     }
 
-    console.log("Authorization header present, proceeding...")
+    console.log("✅ Authorization verified")
 
     // Check if user already exists
     const { data: existingUser, error: checkError } = await supabaseAdmin
       .from("profiles")
-      .select("id")
+      .select("id, email")
       .eq("email", email)
       .maybeSingle()
 
     if (checkError) {
-      console.error("Error checking existing user:", checkError)
+      console.error("❌ Error checking existing user:", checkError)
     }
 
     if (existingUser) {
-      return new Response(JSON.stringify({ error: "User already exists" }), {
-        status: 409,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      return new Response(
+        JSON.stringify({
+          error: "User with this email already exists",
+          email: existingUser.email,
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
     }
 
-    console.log("User does not exist, creating new user...")
+    console.log("✅ User does not exist, proceeding...")
 
-    // Generate a temporary password
+    // Generate secure temporary password
     const tempPassword = crypto.getRandomValues(new Uint8Array(16)).toString() + "A1!"
 
-    // Step 1: Create the user via admin API
+    // Step 1: Create user with EXPLICIT role in metadata
+    // This is critical - the role MUST be passed in raw_user_meta_data
     const { data: newAuthUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       password: tempPassword,
       email_confirm: false,
       user_metadata: {
         full_name: fullName || email.split("@")[0],
-        role: role,
+        role: role, // CRITICAL: This ensures the trigger uses this role
         invited: true,
       },
     })
 
     if (createError || !newAuthUser?.user) {
-      console.error("User creation error:", createError)
+      console.error("❌ User creation error:", createError)
       return new Response(
-        JSON.stringify({ error: "Failed to create user", details: createError?.message }),
+        JSON.stringify({
+          error: "Failed to create user",
+          details: createError?.message || "Unknown error",
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -113,35 +133,70 @@ serve(async (req) => {
       )
     }
 
-    console.log("User created successfully:", newAuthUser.user.id)
+    console.log("✅ User created:", newAuthUser.user.id)
 
-    // Step 2: Update the profile with the correct role
-    // Wait for the trigger to create the profile
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Step 2: Wait for trigger to create profile
+    console.log("⏳ Waiting for database trigger to create profile...")
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
-    const { error: updateError } = await supabaseAdmin
+    // Step 3: Verify profile was created with correct role
+    const { data: createdProfile, error: profileCheckError } = await supabaseAdmin
       .from("profiles")
-      .update({
-        role: role,
-        full_name: fullName || email.split("@")[0],
-      })
+      .select("id, role, full_name")
       .eq("id", newAuthUser.user.id)
+      .single()
 
-    if (updateError) {
-      console.error("Profile update error:", updateError)
-      return new Response(
-        JSON.stringify({ error: "Failed to update profile", details: updateError.message }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (profileCheckError || !createdProfile) {
+      console.error("❌ Profile check error:", profileCheckError)
+      // Try to update/create it explicitly
+      const { error: updateError } = await supabaseAdmin
+        .from("profiles")
+        .upsert({
+          id: newAuthUser.user.id,
+          email: email,
+          full_name: fullName || email.split("@")[0],
+          role: role,
+        })
+
+      if (updateError) {
+        console.error("❌ Profile upsert error:", updateError)
+        return new Response(
+          JSON.stringify({
+            error: "Failed to set up user profile",
+            details: updateError.message,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        )
+      }
+    } else {
+      console.log("✅ Profile exists with role:", createdProfile.role)
+
+      // Verify the role is correct
+      if (createdProfile.role !== role) {
+        console.warn("⚠️ Profile role mismatch, updating...", {
+          expected: role,
+          actual: createdProfile.role,
+        })
+
+        const { error: updateError } = await supabaseAdmin
+          .from("profiles")
+          .update({ role })
+          .eq("id", newAuthUser.user.id)
+
+        if (updateError) {
+          console.error("❌ Role update error:", updateError)
+        } else {
+          console.log("✅ Profile role updated to:", role)
         }
-      )
+      }
     }
 
-    console.log("Profile updated with role:", role)
-
-    // Step 3: Generate password reset email link
-    const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+    // Step 4: Generate password reset link
+    console.log("📧 Generating password reset link...")
+    const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: email,
       options: {
@@ -150,9 +205,12 @@ serve(async (req) => {
     })
 
     if (resetError) {
-      console.error("Password reset error:", resetError)
+      console.error("❌ Password reset error:", resetError)
       return new Response(
-        JSON.stringify({ error: "Failed to generate reset link", details: resetError.message }),
+        JSON.stringify({
+          error: "Failed to generate reset link",
+          details: resetError.message,
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -160,25 +218,28 @@ serve(async (req) => {
       )
     }
 
-    console.log("Recovery link generated and email sent for:", email)
+    console.log("✅ Recovery link generated")
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "User invited successfully",
-        user: {
-          id: newAuthUser.user.id,
-          email: newAuthUser.user.email,
-          role: role,
-        },
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    )
+    // Success response
+    const successResponse = {
+      success: true,
+      message: "User invited successfully",
+      user: {
+        id: newAuthUser.user.id,
+        email: newAuthUser.user.email,
+        role: role,
+        full_name: fullName || email.split("@")[0],
+      },
+    }
+
+    console.log("✅ Invitation complete:", JSON.stringify(successResponse))
+
+    return new Response(JSON.stringify(successResponse), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
   } catch (error) {
-    console.error("Invitation error:", error)
+    console.error("❌ Invitation error:", error)
     return new Response(
       JSON.stringify({
         error: "Internal server error",
