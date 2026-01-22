@@ -1,8 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import * as jwt from "https://esm.sh/jsonwebtoken@9"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+const SUPABASE_JWT_SECRET = Deno.env.get("SUPABASE_JWT_SECRET") || ""
 const APP_URL = Deno.env.get("APP_URL") || "https://project-management-system-ten-eta.vercel.app"
 
 // CORS headers
@@ -32,6 +34,79 @@ serve(async (req) => {
     const body = await req.json()
     const { email, role, fullName } = body
 
+    // Extract and validate Authorization header
+    const authHeader = req.headers.get("Authorization")
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.error("❌ Missing or invalid Authorization header")
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Missing Authorization header" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    const token = authHeader.substring(7) // Remove "Bearer " prefix
+    console.log("🔐 Validating token...")
+
+    // Verify the JWT token
+    let decodedToken: any
+    try {
+      decodedToken = jwt.verify(token, SUPABASE_JWT_SECRET, {
+        algorithms: ["HS256"],
+      })
+      console.log("✅ Token verified, user ID:", decodedToken.sub)
+    } catch (error) {
+      console.error("❌ Token verification failed:", error)
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid token" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    // Create client to check user's role
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+
+    // Check if user is an admin
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("id", decodedToken.sub)
+      .single()
+
+    if (profileError || !userProfile) {
+      console.error("❌ Could not fetch user profile:", profileError)
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Could not verify permissions" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    if (userProfile.role !== "super_admin" && userProfile.role !== "admin") {
+      console.error("❌ User is not an admin. Role:", userProfile.role)
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Only admins can invite users" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    console.log("✅ User authorized as:", userProfile.role)
+
     console.log("📨 Invitation request:", { email, role, fullName })
 
     // Validate input
@@ -57,15 +132,7 @@ serve(async (req) => {
       )
     }
 
-    // Create admin client with service role
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
-
-    console.log("✅ Supabase admin client created")
+    console.log("✅ Supabase admin client ready")
 
     // Check if user already exists
     const { data: existingUser, error: checkError } = await supabaseAdmin
