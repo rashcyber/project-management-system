@@ -32,90 +32,6 @@ serve(async (req) => {
     const body = await req.json()
     const { email, role, fullName } = body
 
-    // Extract and validate Authorization header
-    const authHeader = req.headers.get("Authorization")
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.error("❌ Missing or invalid Authorization header")
-      return new Response(
-        JSON.stringify({ error: "Unauthorized: Missing Authorization header" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      )
-    }
-
-    const token = authHeader.substring(7) // Remove "Bearer " prefix
-    console.log("🔐 Validating token with Supabase...")
-
-    // Create admin client with service role
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
-
-    // Create a user client with the provided token to verify it's valid
-    const supabaseUser = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    })
-
-    // Get the user from the token to extract their ID
-    const { data: { user: currentUser }, error: userError } = await supabaseUser.auth.getUser()
-
-    if (userError || !currentUser) {
-      console.error("❌ Could not validate token:", userError)
-      return new Response(
-        JSON.stringify({ error: "Unauthorized: Invalid or expired token" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      )
-    }
-
-    console.log("✅ Token validated, user ID:", currentUser.id)
-
-    // Check if user is an admin
-    const { data: userProfile, error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("id", currentUser.id)
-      .single()
-
-    if (profileError || !userProfile) {
-      console.error("❌ Could not fetch user profile:", profileError)
-      return new Response(
-        JSON.stringify({ error: "Unauthorized: Could not verify permissions" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      )
-    }
-
-    if (userProfile.role !== "super_admin" && userProfile.role !== "admin") {
-      console.error("❌ User is not an admin. Role:", userProfile.role)
-      return new Response(
-        JSON.stringify({ error: "Forbidden: Only admins can invite users" }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      )
-    }
-
-    console.log("✅ User authorized as:", userProfile.role)
-
     console.log("📨 Invitation request:", { email, role, fullName })
 
     // Validate input
@@ -141,10 +57,18 @@ serve(async (req) => {
       )
     }
 
-    console.log("✅ Supabase admin client ready")
+    // Create admin client with service role
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
 
-    // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabaseAdmin
+    console.log("✅ Supabase admin client created")
+
+    // Check if user already exists in profiles
+    const { data: existingProfile, error: checkError } = await supabaseAdmin
       .from("profiles")
       .select("id, email")
       .eq("email", email)
@@ -154,11 +78,11 @@ serve(async (req) => {
       console.error("❌ Error checking existing user:", checkError)
     }
 
-    if (existingUser) {
+    if (existingProfile) {
       return new Response(
         JSON.stringify({
           error: "User with this email already exists",
-          email: existingUser.email,
+          email: existingProfile.email,
         }),
         {
           status: 409,
@@ -170,7 +94,7 @@ serve(async (req) => {
     console.log("✅ User does not exist, proceeding with creation...")
 
     // Generate secure temporary password
-    const tempPassword = `${crypto.getRandomValues(new Uint8Array(16)).toString()}A1!`
+    const tempPassword = `Temp${Math.random().toString(36).slice(-12)}A1!`
 
     // Step 1: Create user with role in metadata
     const { data: newAuthUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -179,7 +103,7 @@ serve(async (req) => {
       email_confirm: false,
       user_metadata: {
         full_name: fullName || email.split("@")[0],
-        role, // CRITICAL: Pass role in metadata for trigger to use
+        role,
         invited: true,
       },
     })

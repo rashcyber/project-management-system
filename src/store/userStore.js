@@ -141,7 +141,7 @@ const useUserStore = create((set, get) => ({
     }
   },
 
-  // Invite user via email - direct implementation without edge function
+  // Invite user via email - uses server-side edge function
   inviteUser: async (email, role = 'member', fullName = '') => {
     try {
       console.log('📨 Inviting user:', { email, role, fullName });
@@ -173,114 +173,41 @@ const useUserStore = create((set, get) => ({
 
       console.log('✅ Admin verified with role:', adminProfile.role);
 
-      // Check if user already exists
-      const { data: existingUsers } = await supabase.auth.admin.listUsers();
-      const userExists = existingUsers?.users?.some(u => u.email === email);
+      // Call the edge function
+      const supabaseUrl = supabase.supabaseUrl;
+      const accessToken = session.access_token;
 
-      if (userExists) {
-        throw new Error('User with this email already exists');
-      }
+      console.log('🔄 Calling invite-user edge function...');
 
-      // Check profile table as well
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (existingProfile) {
-        throw new Error('User profile already exists');
-      }
-
-      console.log('✅ User does not exist, proceeding with creation...');
-
-      // Generate temporary password
-      const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
-
-      // Create auth user
-      console.log('🔄 Creating auth user...');
-      const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
+      const requestBody = {
         email,
-        password: tempPassword,
-        email_confirm: false,
-        user_metadata: {
-          full_name: fullName || email.split('@')[0],
-          role,
-          invited: true,
-        },
-      });
-
-      if (createError || !newAuthUser?.user) {
-        console.error('❌ Auth user creation failed:', createError);
-        throw new Error(`Failed to create user: ${createError?.message || 'Unknown error'}`);
-      }
-
-      console.log('✅ Auth user created:', newAuthUser.user.id);
-
-      // Create profile record
-      console.log('🔄 Creating profile...');
-      const { error: profileCreateError } = await supabase
-        .from('profiles')
-        .insert({
-          id: newAuthUser.user.id,
-          email,
-          full_name: fullName || email.split('@')[0],
-          role,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-
-      if (profileCreateError) {
-        console.error('⚠️ Profile creation error (will try upsert):', profileCreateError);
-        // Try upsert as fallback
-        const { error: upsertError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: newAuthUser.user.id,
-            email,
-            full_name: fullName || email.split('@')[0],
-            role,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-
-        if (upsertError) {
-          console.error('❌ Profile upsert also failed:', upsertError);
-          throw new Error(`Failed to create profile: ${upsertError.message}`);
-        }
-      }
-
-      console.log('✅ Profile created successfully');
-
-      // Generate password reset link
-      console.log('📧 Generating password reset link...');
-      const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
-        type: 'recovery',
-        email,
-        options: {
-          redirectTo: `${window.location.origin}/reset-password`,
-        },
-      });
-
-      if (resetError) {
-        console.error('⚠️ Reset link generation failed:', resetError);
-        // Don't throw - user was created successfully
-      } else {
-        console.log('✅ Recovery link generated');
-      }
-
-      const response = {
-        success: true,
-        message: 'User invited successfully',
-        user: {
-          id: newAuthUser.user.id,
-          email: newAuthUser.user.email,
-          role,
-          full_name: fullName || email.split('@')[0],
-        },
+        role,
+        fullName: fullName || email.split('@')[0],
       };
 
-      console.log('✅ User invited successfully:', response);
+      console.log('📤 Sending request to:', `${supabaseUrl}/functions/v1/invite-user`);
+      console.log('📦 Request body:', requestBody);
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('📥 Response status:', response.status);
+
+      const responseData = await response.json();
+      console.log('📥 Response data:', responseData);
+
+      if (!response.ok) {
+        console.error('❌ Edge function error (status ' + response.status + '):', responseData);
+        throw new Error(responseData.error || `Failed to invite user (HTTP ${response.status})`);
+      }
+
+      console.log('✅ User invited successfully:', responseData);
 
       // Verify admin is still logged in
       const { data: { session: currentSession }, error: verifyError } = await supabase.auth.getSession();
@@ -291,7 +218,7 @@ const useUserStore = create((set, get) => ({
         console.log('✅ Admin session preserved');
       }
 
-      return { data: response, error: null };
+      return { data: responseData, error: null };
     } catch (error) {
       console.error('❌ Invitation error:', error);
       return { data: null, error };
