@@ -162,15 +162,20 @@ const useUserStore = create((set, get) => ({
 
       if (signUpError) throw signUpError;
 
-      // Step 2: Update the profile with the correct role
+      // Step 2: Update the profile with the correct role (in case trigger assigned wrong role)
       if (signUpData.user) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({
             role: role,
             full_name: fullName || email.split('@')[0],
           })
           .eq('id', signUpData.user.id);
+
+        if (updateError) {
+          console.error('Failed to update profile role:', updateError);
+          throw updateError;
+        }
       }
 
       // Step 3: Send password reset email so user can set their own password
@@ -182,7 +187,9 @@ const useUserStore = create((set, get) => ({
 
       if (resetError) {
         console.error('Failed to send reset email:', resetError);
-        // Don't throw here - account was created successfully
+        // Don't throw here - account was created successfully, but log it
+        // Note: This might indicate email service is not properly configured in Supabase
+        throw new Error(`User created but failed to send password reset email: ${resetError.message}`);
       }
 
       return { data: signUpData, error: null };
