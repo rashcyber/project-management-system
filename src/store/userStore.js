@@ -141,59 +141,53 @@ const useUserStore = create((set, get) => ({
     }
   },
 
-  // Invite user via email - creates account and sends password reset
+  // Invite user via email - calls Supabase edge function (server-side with admin privileges)
   inviteUser: async (email, role = 'member', fullName = '') => {
     try {
-      // Generate a secure temporary password
-      const tempPassword = crypto.randomUUID() + 'A1!';
+      // Step 1: Get current session to verify admin is logged in
+      const { data: { session } } = await supabase.auth.getSession();
 
-      // Step 1: Create the user account with a temporary password
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: email,
-        password: tempPassword,
-        options: {
-          data: {
-            full_name: fullName || email.split('@')[0],
-            role: role,
-            invited: true,
-          },
+      if (!session) {
+        throw new Error('You must be logged in to send invitations');
+      }
+
+      // Step 2: Call the invite-user edge function (server-side with admin privileges)
+      // This prevents the admin's session from being affected
+      const supabaseUrl = supabase.supabaseUrl;
+      const accessToken = session.access_token;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
+        body: JSON.stringify({
+          email: email,
+          role: role,
+          fullName: fullName || email.split('@')[0],
+        }),
       });
 
-      if (signUpError) throw signUpError;
+      const responseData = await response.json();
 
-      // Step 2: Update the profile with the correct role (in case trigger assigned wrong role)
-      if (signUpData.user) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            role: role,
-            full_name: fullName || email.split('@')[0],
-          })
-          .eq('id', signUpData.user.id);
-
-        if (updateError) {
-          console.error('Failed to update profile role:', updateError);
-          throw updateError;
-        }
+      if (!response.ok) {
+        console.error('Edge function error:', responseData);
+        throw new Error(responseData.error || 'Failed to invite user');
       }
 
-      // Step 3: Send password reset email so user can set their own password
-      // Use VITE_APP_URL from env if available, otherwise fallback to window.location.origin
-      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${appUrl}/reset-password`,
-      });
+      // Step 3: Verify admin is still logged in with same session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-      if (resetError) {
-        console.error('Failed to send reset email:', resetError);
-        // Don't throw here - account was created successfully, but log it
-        // Note: This might indicate email service is not properly configured in Supabase
-        throw new Error(`User created but failed to send password reset email: ${resetError.message}`);
+      if (!currentSession || currentSession.user.id !== session.user.id) {
+        console.error('CRITICAL: Admin session changed during invitation');
+        throw new Error('Session was affected during invitation');
       }
 
-      return { data: signUpData, error: null };
+      console.log('User invited successfully:', responseData);
+      return { data: responseData, error: null };
     } catch (error) {
+      console.error('Invitation error:', error);
       return { data: null, error };
     }
   },
