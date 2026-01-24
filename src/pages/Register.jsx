@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User, UserPlus } from 'lucide-react';
 import { Button, Input } from '../components/common';
 import useAuthStore from '../store/authStore';
 import { toast } from '../store/toastStore';
+import { supabase } from '../lib/supabase';
 import './Auth.css';
 
 const Register = () => {
@@ -17,9 +18,67 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [inviteInfo, setInviteInfo] = useState(null);
 
   const { signUp } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Check for invite link
+  useEffect(() => {
+    const inviteCode = searchParams.get('invite');
+    if (inviteCode) {
+      loadInviteInfo(inviteCode);
+    }
+  }, [searchParams]);
+
+  const loadInviteInfo = async (code) => {
+    try {
+      const { data: link, error } = await supabase
+        .from('invite_links')
+        .select('*')
+        .eq('code', code)
+        .maybeSingle();
+
+      if (error || !link) {
+        toast.error('Invalid or expired invite link');
+        return;
+      }
+
+      // Check if link is still valid
+      if (!link.is_active) {
+        toast.error('This invite link has been revoked');
+        return;
+      }
+
+      if (link.expires_at && new Date(link.expires_at) <= new Date()) {
+        toast.error('This invite link has expired');
+        return;
+      }
+
+      if (link.max_uses && link.used_count >= link.max_uses) {
+        toast.error('This invite link has reached its maximum uses');
+        return;
+      }
+
+      // Get workspace info
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('name')
+        .eq('id', link.workspace_id)
+        .single();
+
+      setInviteInfo({
+        code,
+        linkId: link.id,
+        workspaceName: workspace?.name,
+        role: link.role,
+        workspaceId: link.workspace_id,
+      });
+    } catch (error) {
+      console.error('Error loading invite info:', error);
+    }
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -90,6 +149,23 @@ const Register = () => {
         return;
       }
 
+      // If signing up via invite link, handle the link usage
+      if (inviteInfo) {
+        try {
+          // Increment the used_count
+          const { error: updateError } = await supabase
+            .from('invite_links')
+            .update({ used_count: supabase.rpc('increment_used_count', { link_id: inviteInfo.linkId }) })
+            .eq('id', inviteInfo.linkId);
+
+          if (updateError) {
+            console.warn('Failed to update invite link usage:', updateError);
+          }
+        } catch (err) {
+          console.warn('Error updating invite link:', err);
+        }
+      }
+
       toast.success('Account created successfully! Welcome aboard!');
       navigate('/dashboard');
     } catch (error) {
@@ -106,8 +182,20 @@ const Register = () => {
             <UserPlus size={32} />
           </div>
           <h1>Create Account</h1>
-          <p>Sign up to get started with TaskFlow</p>
+          {inviteInfo ? (
+            <p>Join <strong>{inviteInfo.workspaceName}</strong> workspace as {inviteInfo.role}</p>
+          ) : (
+            <p>Sign up to get started with TaskFlow</p>
+          )}
         </div>
+
+        {inviteInfo && (
+          <div className="invite-info-banner">
+            <p className="invite-message">
+              You're joining <strong>{inviteInfo.workspaceName}</strong> with the role <strong>{inviteInfo.role}</strong>
+            </p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <Input

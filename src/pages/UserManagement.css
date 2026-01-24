@@ -24,6 +24,38 @@
   font-size: 0.875rem;
 }
 
+/* Tabs */
+.management-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.management-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.management-tab:hover {
+  color: var(--text-primary);
+}
+
+.management-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
 /* Toolbar */
 .page-toolbar {
   display: flex;

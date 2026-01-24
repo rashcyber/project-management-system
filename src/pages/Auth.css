@@ -45,6 +45,31 @@
   font-size: 0.875rem;
 }
 
+.auth-header p strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Invite Info Banner */
+.invite-info-banner {
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-left: 4px solid #3b82f6;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+}
+
+.invite-message {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #1e40af;
+}
+
+.invite-message strong {
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;

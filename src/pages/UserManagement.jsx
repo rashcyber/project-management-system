@@ -11,8 +11,10 @@ import {
   Mail,
   Crown,
   Send,
+  Link,
 } from 'lucide-react';
 import { Button, Modal, Avatar } from '../components/common';
+import InviteLinksManager from '../components/InviteLinksManager';
 import useUserStore from '../store/userStore';
 import useAuthStore from '../store/authStore';
 import { toast } from '../store/toastStore';
@@ -39,6 +41,7 @@ const UserManagement = () => {
   const [newRole, setNewRole] = useState('');
   const [inviteData, setInviteData] = useState({ email: '', fullName: '', role: 'member' });
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('users');
 
   useEffect(() => {
     fetchUsers();
@@ -149,12 +152,34 @@ const UserManagement = () => {
             Manage users and their roles{profile?.workspace_id ? ` in your workspace` : ''}
           </p>
         </div>
-        <Button variant="primary" onClick={() => setShowInviteModal(true)}>
-          <UserPlus size={18} />
-          Invite User
-        </Button>
+        {activeTab === 'users' && (
+          <Button variant="primary" onClick={() => setShowInviteModal(true)}>
+            <UserPlus size={18} />
+            Invite User
+          </Button>
+        )}
       </div>
 
+      {/* Tabs */}
+      <div className="management-tabs">
+        <button
+          className={`management-tab ${activeTab === 'users' ? 'active' : ''}`}
+          onClick={() => setActiveTab('users')}
+        >
+          <Users size={18} />
+          <span>Users</span>
+        </button>
+        <button
+          className={`management-tab ${activeTab === 'links' ? 'active' : ''}`}
+          onClick={() => setActiveTab('links')}
+        >
+          <Link size={18} />
+          <span>Invite Links</span>
+        </button>
+      </div>
+
+      {activeTab === 'users' && (
+      <>
       {/* Toolbar */}
       <div className="page-toolbar">
         <div className="search-wrapper">
@@ -275,6 +300,12 @@ const UserManagement = () => {
           </table>
         )}
       </div>
+      </>
+      )}
+
+      {activeTab === 'links' && (
+        <InviteLinksManager />
+      )}
 
       {/* Change Role Modal */}
       <Modal
