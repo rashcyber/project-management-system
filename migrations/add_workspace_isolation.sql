@@ -125,18 +125,18 @@ CREATE TRIGGER on_auth_user_created
 DO $$
 DECLARE
   admin_record RECORD;
-  workspace_id UUID;
+  new_workspace_id UUID;
 BEGIN
   FOR admin_record IN
     SELECT id, full_name, email FROM profiles
-    WHERE role = 'super_admin' AND workspace_id IS NULL
+    WHERE role = 'super_admin' AND profiles.workspace_id IS NULL
     ORDER BY created_at ASC
   LOOP
     INSERT INTO workspaces (name, owner_id)
     VALUES (admin_record.full_name || '''s Workspace', admin_record.id)
-    RETURNING id INTO workspace_id;
+    RETURNING id INTO new_workspace_id;
 
-    UPDATE profiles SET workspace_id = workspace_id WHERE id = admin_record.id;
+    UPDATE profiles SET workspace_id = new_workspace_id WHERE id = admin_record.id;
   END LOOP;
 END $$;
 
@@ -144,18 +144,18 @@ END $$;
 DO $$
 DECLARE
   admin_record RECORD;
-  workspace_id UUID;
+  new_workspace_id UUID;
 BEGIN
   FOR admin_record IN
     SELECT id, full_name, email FROM profiles
-    WHERE role = 'admin' AND workspace_id IS NULL
+    WHERE role = 'admin' AND profiles.workspace_id IS NULL
     ORDER BY created_at ASC
   LOOP
     INSERT INTO workspaces (name, owner_id)
     VALUES (admin_record.full_name || '''s Workspace', admin_record.id)
-    RETURNING id INTO workspace_id;
+    RETURNING id INTO new_workspace_id;
 
-    UPDATE profiles SET workspace_id = workspace_id WHERE id = admin_record.id;
+    UPDATE profiles SET workspace_id = new_workspace_id WHERE id = admin_record.id;
   END LOOP;
 END $$;
 
