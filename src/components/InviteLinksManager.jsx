@@ -89,6 +89,34 @@ const InviteLinksManager = () => {
     }
   };
 
+  const handleReactivateLink = async (linkId) => {
+    try {
+      const { error } = await revokeInviteLink(linkId, true);
+      if (error) throw error;
+
+      setLinks(links.map(l => l.id === linkId ? { ...l, is_active: true } : l));
+      toast.success('Invite link reactivated');
+    } catch (error) {
+      toast.error('Failed to reactivate link');
+      console.error(error);
+    }
+  };
+
+  const handleDeleteLink = async (linkId) => {
+    if (!window.confirm('Are you sure you want to delete this link permanently? This action cannot be undone.')) return;
+
+    try {
+      const { error } = await revokeInviteLink(linkId, false, true);
+      if (error) throw error;
+
+      setLinks(links.filter(l => l.id !== linkId));
+      toast.success('Invite link deleted');
+    } catch (error) {
+      toast.error('Failed to delete link');
+      console.error(error);
+    }
+  };
+
   const getActiveLinksCount = () => {
     return links.filter(l => l.is_active && (!l.expires_at || new Date(l.expires_at) > new Date())).length;
   };
@@ -250,6 +278,26 @@ const InviteLinksManager = () => {
                       <Trash2 size={18} />
                       Revoke
                     </button>
+                  )}
+                  {!link.is_active && (
+                    <>
+                      <button
+                        className="action-btn reactivate-btn"
+                        onClick={() => handleReactivateLink(link.id)}
+                        title="Reactivate this link"
+                      >
+                        <Link size={18} />
+                        Reactivate
+                      </button>
+                      <button
+                        className="action-btn delete-btn"
+                        onClick={() => handleDeleteLink(link.id)}
+                        title="Delete this link permanently"
+                      >
+                        <Trash2 size={18} />
+                        Delete
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

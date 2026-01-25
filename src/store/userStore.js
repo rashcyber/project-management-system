@@ -430,18 +430,40 @@ const useUserStore = create((set, get) => ({
   },
 
   // Revoke invite link
-  revokeInviteLink: async (inviteLinkId) => {
+  revokeInviteLink: async (inviteLinkId, reactivate = false, deleteLink = false) => {
     try {
-      const { error } = await supabase
-        .from('invite_links')
-        .update({ is_active: false })
-        .eq('id', inviteLinkId);
+      if (deleteLink) {
+        // Delete the link permanently
+        const { error } = await supabase
+          .from('invite_links')
+          .delete()
+          .eq('id', inviteLinkId);
 
-      if (error) throw error;
+        if (error) throw error;
+        console.log('✅ Invite link deleted');
+      } else if (reactivate) {
+        // Reactivate a revoked link
+        const { error } = await supabase
+          .from('invite_links')
+          .update({ is_active: true })
+          .eq('id', inviteLinkId);
+
+        if (error) throw error;
+        console.log('✅ Invite link reactivated');
+      } else {
+        // Revoke the link
+        const { error } = await supabase
+          .from('invite_links')
+          .update({ is_active: false })
+          .eq('id', inviteLinkId);
+
+        if (error) throw error;
+        console.log('✅ Invite link revoked');
+      }
 
       return { error: null };
     } catch (error) {
-      console.error('❌ Error revoking invite link:', error);
+      console.error('❌ Error managing invite link:', error);
       return { error };
     }
   },
