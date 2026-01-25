@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Copy, Trash2, Plus, Loader, AlertCircle } from 'lucide-react';
-import { Button, Modal } from './common';
+import { Button, Modal, DeleteConfirmModal } from './common';
 import useUserStore from '../store/userStore';
 import { toast } from '../store/toastStore';
 import './InviteLinksManager.css';
@@ -12,6 +12,7 @@ const InviteLinksManager = () => {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, action: null, linkId: null });
 
   const [formData, setFormData] = useState({
     role: 'member',
@@ -75,18 +76,11 @@ const InviteLinksManager = () => {
   };
 
   const handleRevokeLink = async (linkId) => {
-    if (!window.confirm('Are you sure you want to revoke this link?')) return;
-
-    try {
-      const { error } = await revokeInviteLink(linkId);
-      if (error) throw error;
-
-      setLinks(links.map(l => l.id === linkId ? { ...l, is_active: false } : l));
-      toast.success('Invite link revoked');
-    } catch (error) {
-      toast.error('Failed to revoke link');
-      console.error(error);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      action: 'revoke',
+      linkId,
+    });
   };
 
   const handleReactivateLink = async (linkId) => {
@@ -103,17 +97,31 @@ const InviteLinksManager = () => {
   };
 
   const handleDeleteLink = async (linkId) => {
-    if (!window.confirm('Are you sure you want to delete this link permanently? This action cannot be undone.')) return;
+    setConfirmDialog({
+      isOpen: true,
+      action: 'delete',
+      linkId,
+    });
+  };
 
+  const handleConfirmAction = async () => {
     try {
-      const { error } = await revokeInviteLink(linkId, false, true);
-      if (error) throw error;
-
-      setLinks(links.filter(l => l.id !== linkId));
-      toast.success('Invite link deleted');
+      if (confirmDialog.action === 'revoke') {
+        const { error } = await revokeInviteLink(confirmDialog.linkId);
+        if (error) throw error;
+        setLinks(links.map(l => l.id === confirmDialog.linkId ? { ...l, is_active: false } : l));
+        toast.success('Invite link revoked');
+      } else if (confirmDialog.action === 'delete') {
+        const { error } = await revokeInviteLink(confirmDialog.linkId, false, true);
+        if (error) throw error;
+        setLinks(links.filter(l => l.id !== confirmDialog.linkId));
+        toast.success('Invite link deleted');
+      }
     } catch (error) {
-      toast.error('Failed to delete link');
+      toast.error(`Failed to ${confirmDialog.action} link`);
       console.error(error);
+    } finally {
+      setConfirmDialog({ isOpen: false, action: null, linkId: null });
     }
   };
 
@@ -305,6 +313,20 @@ const InviteLinksManager = () => {
           })}
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <DeleteConfirmModal
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, action: null, linkId: null })}
+        onConfirm={handleConfirmAction}
+        title={confirmDialog.action === 'delete' ? 'Delete Link' : 'Revoke Link'}
+        message={
+          confirmDialog.action === 'delete'
+            ? 'Are you sure you want to delete this link permanently? This action cannot be undone.'
+            : 'Are you sure you want to revoke this link? It can be reactivated later.'
+        }
+        isLoading={loading}
+      />
 
       {/* Generate Link Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)}>

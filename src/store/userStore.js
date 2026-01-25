@@ -254,95 +254,30 @@ const useUserStore = create((set, get) => ({
 
       console.log('✅ Admin verified with role:', adminProfile.role, 'workspace:', adminProfile.workspace_id);
 
-      // STEP 1: Check if user already exists
-      console.log('🔍 Checking if user exists...');
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id, email, role')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (existingProfile) {
-        throw new Error(`User with email ${email} already exists`);
-      }
-
-      // STEP 2: Create auth user with temporary password
-      console.log('📝 Creating auth user...');
-      const tempPassword = `Temp${Math.random().toString(36).slice(-12)}A1!`;
-
-      const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
-        email,
-        password: tempPassword,
-        email_confirm: false,
-      });
-
-      if (createError || !newAuthUser?.user) {
-        console.error('❌ User creation error:', createError);
-        throw new Error('Failed to create user: ' + (createError?.message || 'Unknown error'));
-      }
-
-      const newUserId = newAuthUser.user.id;
-      console.log('✅ Auth user created with ID:', newUserId);
-
-      // STEP 3: Wait for trigger to potentially create profile
-      console.log('⏳ Waiting for database trigger...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // STEP 4: Directly upsert profile with correct role and workspace
-      console.log('📝 Upserting profile with role:', role, 'and workspace:', adminProfile.workspace_id);
-      const { data: upsertedProfile, error: upsertError } = await supabase
-        .from('profiles')
-        .upsert(
-          {
-            id: newUserId,
-            email,
-            full_name: fullName || email.split('@')[0],
-            role,
-            workspace_id: adminProfile.workspace_id,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' }
-        )
-        .select()
-        .single();
-
-      if (upsertError) {
-        console.error('❌ Profile upsert error:', upsertError);
-        throw new Error('Failed to set up profile: ' + upsertError.message);
-      }
-
-      console.log('✅ Profile created/updated with role:', upsertedProfile.role);
-
-      // STEP 5: Generate recovery link for password reset
-      console.log('📧 Generating password reset link...');
-      const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
-        type: 'recovery',
-        email,
-      });
-
-      if (resetError) {
-        console.warn('⚠️ Warning: Password reset link generation failed, but user was created');
-      } else {
-        console.log('✅ Password reset link generated');
-      }
-
-      // Success response
-      const response = {
-        success: true,
-        message: 'User invited successfully',
-        user: {
-          id: newUserId,
-          email: email,
-          role: upsertedProfile.role,
-          full_name: upsertedProfile.full_name,
-          workspace_id: upsertedProfile.workspace_id,
+      // Call edge function to create user and invite them
+      console.log('📧 Calling invite-user edge function...');
+      const { data, error } = await supabase.functions.invoke('invite-user', {
+        body: {
+          email,
+          role,
+          fullName: fullName || email.split('@')[0],
+          inviter_workspace_id: adminProfile.workspace_id,
         },
-      };
+      });
 
-      console.log('✅ Invitation process complete!');
+      if (error) {
+        console.error('❌ Edge function error:', error);
+        throw new Error(error.message || 'Failed to invite user');
+      }
 
-      return { data: response, error: null };
+      if (!data || data.error) {
+        console.error('❌ Invitation error:', data?.error);
+        throw new Error(data?.error || 'Failed to invite user');
+      }
+
+      console.log('✅ User invited successfully:', data);
+
+      return { data, error: null };
     } catch (error) {
       console.error('❌ Invitation error:', error);
       return { data: null, error };
