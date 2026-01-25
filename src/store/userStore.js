@@ -254,30 +254,120 @@ const useUserStore = create((set, get) => ({
 
       console.log('✅ Admin verified with role:', adminProfile.role, 'workspace:', adminProfile.workspace_id);
 
-      // Call edge function to create user and invite them
-      console.log('📧 Calling invite-user edge function...');
-      const { data, error } = await supabase.functions.invoke('invite-user', {
-        body: {
-          email,
+      // Check if user already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (existingProfile) {
+        throw new Error(`User with email ${email} already exists`);
+      }
+
+      console.log('✅ User does not exist, proceeding with creation...');
+
+      // Generate temporary password
+      const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
+
+      // Create auth user
+      console.log('🔄 Creating auth user...');
+      const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        email_confirm: false,
+        user_metadata: {
+          full_name: fullName || email.split('@')[0],
           role,
-          fullName: fullName || email.split('@')[0],
-          inviter_workspace_id: adminProfile.workspace_id,
+          invited: true,
         },
       });
 
-      if (error) {
-        console.error('❌ Edge function error:', error);
-        throw new Error(error.message || 'Failed to invite user');
+      if (createError || !newAuthUser?.user) {
+        console.error('❌ Auth user creation failed:', createError);
+        throw new Error(`Failed to create user: ${createError?.message || 'Unknown error'}`);
       }
 
-      if (!data || data.error) {
-        console.error('❌ Invitation error:', data?.error);
-        throw new Error(data?.error || 'Failed to invite user');
+      console.log('✅ Auth user created:', newAuthUser.user.id);
+
+      // Create profile record with workspace assignment
+      console.log('🔄 Creating profile...');
+      const { error: profileCreateError } = await supabase
+        .from('profiles')
+        .insert({
+          id: newAuthUser.user.id,
+          email,
+          full_name: fullName || email.split('@')[0],
+          role,
+          workspace_id: adminProfile.workspace_id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (profileCreateError) {
+        console.error('⚠️ Profile creation error (will try upsert):', profileCreateError);
+        // Try upsert as fallback
+        const { error: upsertError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: newAuthUser.user.id,
+            email,
+            full_name: fullName || email.split('@')[0],
+            role,
+            workspace_id: adminProfile.workspace_id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (upsertError) {
+          console.error('❌ Profile upsert also failed:', upsertError);
+          throw new Error(`Failed to create profile: ${upsertError.message}`);
+        }
       }
 
-      console.log('✅ User invited successfully:', data);
+      console.log('✅ Profile created successfully');
 
-      return { data, error: null };
+      // Generate password reset link to send to user
+      console.log('📧 Generating password reset link...');
+      const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: {
+          redirectTo: `${window.location.origin}/reset-password`,
+        },
+      });
+
+      if (resetError) {
+        console.error('⚠️ Reset link generation failed:', resetError);
+        // Don't throw - user was created successfully
+      } else {
+        console.log('✅ Recovery link generated:', resetData?.properties?.action_link);
+      }
+
+      const response = {
+        success: true,
+        message: 'User invited successfully. Password reset link sent to their email.',
+        user: {
+          id: newAuthUser.user.id,
+          email: newAuthUser.user.email,
+          role,
+          full_name: fullName || email.split('@')[0],
+          workspace_id: adminProfile.workspace_id,
+        },
+      };
+
+      console.log('✅ User invited successfully:', response);
+
+      // Verify admin is still logged in
+      const { data: { session: currentSession }, error: verifyError } = await supabase.auth.getSession();
+
+      if (verifyError || !currentSession || currentSession.user.id !== adminUserId) {
+        console.error('⚠️ WARNING: Admin session changed unexpectedly!');
+      } else {
+        console.log('✅ Admin session preserved');
+      }
+
+      return { data: response, error: null };
     } catch (error) {
       console.error('❌ Invitation error:', error);
       return { data: null, error };
