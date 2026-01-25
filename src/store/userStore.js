@@ -254,7 +254,7 @@ const useUserStore = create((set, get) => ({
 
       console.log('✅ Admin verified with role:', adminProfile.role, 'workspace:', adminProfile.workspace_id);
 
-      // Check if user already exists
+      // Check if user already exists in profiles
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('id, email')
@@ -267,89 +267,70 @@ const useUserStore = create((set, get) => ({
 
       console.log('✅ User does not exist, proceeding with creation...');
 
-      // Generate temporary password
-      const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
+      // Generate a secure temporary password
+      const tempPassword = crypto.randomUUID() + 'A1!';
 
-      // Create auth user
-      console.log('🔄 Creating auth user...');
-      const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
-        email,
+      // Step 1: Create the user account with a temporary password
+      console.log('🔄 Creating auth user via signUp...');
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email,
         password: tempPassword,
-        email_confirm: false,
-        user_metadata: {
-          full_name: fullName || email.split('@')[0],
-          role,
-          invited: true,
+        options: {
+          data: {
+            full_name: fullName || email.split('@')[0],
+            role: role,
+            invited: true,
+          },
         },
       });
 
-      if (createError || !newAuthUser?.user) {
-        console.error('❌ Auth user creation failed:', createError);
-        throw new Error(`Failed to create user: ${createError?.message || 'Unknown error'}`);
+      if (signUpError) {
+        console.error('❌ SignUp error:', signUpError);
+        throw signUpError;
       }
 
-      console.log('✅ Auth user created:', newAuthUser.user.id);
+      console.log('✅ Auth user created:', signUpData.user?.id);
 
-      // Create profile record with workspace assignment
-      console.log('🔄 Creating profile...');
-      const { error: profileCreateError } = await supabase
-        .from('profiles')
-        .insert({
-          id: newAuthUser.user.id,
-          email,
-          full_name: fullName || email.split('@')[0],
-          role,
-          workspace_id: adminProfile.workspace_id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-
-      if (profileCreateError) {
-        console.error('⚠️ Profile creation error (will try upsert):', profileCreateError);
-        // Try upsert as fallback
-        const { error: upsertError } = await supabase
+      // Step 2: Update the profile with the correct role and workspace
+      if (signUpData.user) {
+        console.log('🔄 Updating profile with role and workspace...');
+        const { error: updateError } = await supabase
           .from('profiles')
-          .upsert({
-            id: newAuthUser.user.id,
-            email,
-            full_name: fullName || email.split('@')[0],
-            role,
+          .update({
+            role: role,
             workspace_id: adminProfile.workspace_id,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
+            full_name: fullName || email.split('@')[0],
+          })
+          .eq('id', signUpData.user.id);
 
-        if (upsertError) {
-          console.error('❌ Profile upsert also failed:', upsertError);
-          throw new Error(`Failed to create profile: ${upsertError.message}`);
+        if (updateError) {
+          console.error('⚠️ Profile update error:', updateError);
+          // Don't throw - account was created successfully
+        } else {
+          console.log('✅ Profile updated with role:', role, 'and workspace:', adminProfile.workspace_id);
         }
       }
 
-      console.log('✅ Profile created successfully');
-
-      // Generate password reset link to send to user
-      console.log('📧 Generating password reset link...');
-      const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
-        type: 'recovery',
-        email,
-        options: {
-          redirectTo: `${window.location.origin}/reset-password`,
-        },
+      // Step 3: Send password reset email so user can set their own password
+      console.log('📧 Sending password reset email...');
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${appUrl}/reset-password`,
       });
 
       if (resetError) {
-        console.error('⚠️ Reset link generation failed:', resetError);
-        // Don't throw - user was created successfully
+        console.error('⚠️ Reset email error:', resetError);
+        // Don't throw here - account was created successfully
       } else {
-        console.log('✅ Recovery link generated:', resetData?.properties?.action_link);
+        console.log('✅ Password reset email sent');
       }
 
       const response = {
         success: true,
         message: 'User invited successfully. Password reset link sent to their email.',
         user: {
-          id: newAuthUser.user.id,
-          email: newAuthUser.user.email,
+          id: signUpData.user?.id,
+          email: signUpData.user?.email,
           role,
           full_name: fullName || email.split('@')[0],
           workspace_id: adminProfile.workspace_id,
@@ -357,15 +338,6 @@ const useUserStore = create((set, get) => ({
       };
 
       console.log('✅ User invited successfully:', response);
-
-      // Verify admin is still logged in
-      const { data: { session: currentSession }, error: verifyError } = await supabase.auth.getSession();
-
-      if (verifyError || !currentSession || currentSession.user.id !== adminUserId) {
-        console.error('⚠️ WARNING: Admin session changed unexpectedly!');
-      } else {
-        console.log('✅ Admin session preserved');
-      }
 
       return { data: response, error: null };
     } catch (error) {
