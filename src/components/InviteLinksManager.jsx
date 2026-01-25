@@ -259,7 +259,7 @@ const InviteLinksManager = () => {
       )}
 
       {/* Generate Link Modal */}
-      <Modal open={showModal} onClose={() => setShowModal(false)}>
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)}>
         <div className="generate-link-modal">
           <h2>Generate Invite Link</h2>
 
