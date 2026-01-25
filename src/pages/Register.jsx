@@ -149,20 +149,41 @@ const Register = () => {
         return;
       }
 
-      // If signing up via invite link, handle the link usage
-      if (inviteInfo) {
+      // If signing up via invite link, handle the workspace assignment and link usage
+      if (inviteInfo && data.user) {
         try {
-          // Increment the used_count
+          // Step 1: Update user's profile to assign them to the workspace with the correct role
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              workspace_id: inviteInfo.workspaceId,
+              role: inviteInfo.role,
+            })
+            .eq('id', data.user.id);
+
+          if (profileError) {
+            console.warn('Failed to update profile with workspace:', profileError);
+          }
+
+          // Step 2: Increment the used_count on the invite link
+          // First get current count, then increment
+          const { data: currentLink } = await supabase
+            .from('invite_links')
+            .select('used_count')
+            .eq('id', inviteInfo.linkId)
+            .single();
+
+          const newCount = (currentLink?.used_count || 0) + 1;
           const { error: updateError } = await supabase
             .from('invite_links')
-            .update({ used_count: supabase.rpc('increment_used_count', { link_id: inviteInfo.linkId }) })
+            .update({ used_count: newCount })
             .eq('id', inviteInfo.linkId);
 
           if (updateError) {
             console.warn('Failed to update invite link usage:', updateError);
           }
         } catch (err) {
-          console.warn('Error updating invite link:', err);
+          console.warn('Error processing invite link:', err);
         }
       }
 
