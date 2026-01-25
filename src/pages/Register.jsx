@@ -152,13 +152,22 @@ const Register = () => {
       // If signing up via invite link, handle the workspace assignment and link usage
       if (inviteInfo && data.user) {
         try {
-          // Step 1: Update user's profile to assign them to the workspace with the correct role
+          // Step 1: Check if user already has a super_admin role
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
+
+          // Only update role if user is not already a super_admin
+          const updateData = { workspace_id: inviteInfo.workspaceId };
+          if (existingProfile?.role !== 'super_admin') {
+            updateData.role = inviteInfo.role;
+          }
+
           const { error: profileError } = await supabase
             .from('profiles')
-            .update({
-              workspace_id: inviteInfo.workspaceId,
-              role: inviteInfo.role,
-            })
+            .update(updateData)
             .eq('id', data.user.id);
 
           if (profileError) {
