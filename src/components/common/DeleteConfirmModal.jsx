@@ -11,7 +11,15 @@ const DeleteConfirmModal = ({
   title = 'Confirm Delete',
   message = 'Are you sure you want to delete this item?',
   isLoading = false,
+  confirmText = 'Delete',
+  variant = 'danger',
 }) => {
+  const variantStyles = {
+    danger: 'danger',
+    warning: 'warning',
+    info: 'primary',
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -30,11 +38,11 @@ const DeleteConfirmModal = ({
             Cancel
           </Button>
           <Button
-            variant="danger"
+            variant={variantStyles[variant] || 'danger'}
             onClick={onConfirm}
             loading={isLoading}
           >
-            Delete
+            {confirmText}
           </Button>
         </div>
       </div>

@@ -325,6 +325,8 @@ const InviteLinksManager = () => {
             ? 'Are you sure you want to delete this link permanently? This action cannot be undone.'
             : 'Are you sure you want to revoke this link? It can be reactivated later.'
         }
+        confirmText={confirmDialog.action === 'delete' ? 'Delete' : 'Revoke'}
+        variant={confirmDialog.action === 'delete' ? 'danger' : 'warning'}
         isLoading={loading}
       />
 
