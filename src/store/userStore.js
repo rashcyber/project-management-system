@@ -419,7 +419,10 @@ const useUserStore = create((set, get) => ({
 
       if (error) throw error;
 
-      return { data: links, error: null };
+      // Filter out soft-deleted items (deleted_at is not null)
+      const activeLinks = links?.filter(link => !link.deleted_at) || [];
+
+      return { data: activeLinks, error: null };
     } catch (error) {
       console.error('❌ Error fetching invite links:', error);
       return { data: null, error };
@@ -430,25 +433,41 @@ const useUserStore = create((set, get) => ({
   revokeInviteLink: async (inviteLinkId, reactivate = false, deleteLink = false) => {
     try {
       if (deleteLink) {
-        // Delete the link permanently
-        const { error } = await supabase
+        // Try hard delete first, fall back to soft delete if needed
+        console.log('🗑️ Attempting to delete invite link:', inviteLinkId);
+        const { error: hardDeleteError } = await supabase
           .from('invite_links')
           .delete()
           .eq('id', inviteLinkId);
 
-        if (error) throw error;
-        console.log('✅ Invite link deleted');
+        if (hardDeleteError) {
+          // If hard delete fails due to RLS, do soft delete instead
+          console.warn('⚠️ Hard delete failed, trying soft delete:', hardDeleteError);
+          const { error: softDeleteError } = await supabase
+            .from('invite_links')
+            .update({ is_active: false, deleted_at: new Date().toISOString() })
+            .eq('id', inviteLinkId);
+
+          if (softDeleteError) {
+            throw new Error(`Failed to delete link: ${softDeleteError.message}`);
+          }
+          console.log('✅ Invite link soft deleted');
+        } else {
+          console.log('✅ Invite link hard deleted');
+        }
       } else if (reactivate) {
         // Reactivate a revoked link
+        console.log('♻️ Reactivating invite link:', inviteLinkId);
         const { error } = await supabase
           .from('invite_links')
-          .update({ is_active: true })
+          .update({ is_active: true, deleted_at: null })
           .eq('id', inviteLinkId);
 
         if (error) throw error;
         console.log('✅ Invite link reactivated');
       } else {
         // Revoke the link
+        console.log('🔒 Revoking invite link:', inviteLinkId);
         const { error } = await supabase
           .from('invite_links')
           .update({ is_active: false })
