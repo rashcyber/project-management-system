@@ -17,17 +17,17 @@ LIMIT 1;
 -- Step 3: For that task, check if user has permission via the RLS policy logic
 -- (This simulates what the RLS policy checks)
 SELECT '=== RLS Policy Check (does user have access to task project?) ===' as status;
-WITH sample_task AS (
-  SELECT id, project_id FROM tasks ORDER BY created_at DESC LIMIT 1
-)
 SELECT
-  st.id as task_id,
-  st.project_id as task_project_id,
+  t.id as task_id,
+  t.project_id as task_project_id,
   auth.uid() as current_user_id,
   EXISTS (
     SELECT 1 FROM project_members pm
-    WHERE pm.project_id = st.project_id AND pm.user_id = auth.uid()
-  ) as user_is_member;
+    WHERE pm.project_id = t.project_id AND pm.user_id = auth.uid()
+  ) as user_is_member
+FROM tasks t
+ORDER BY t.created_at DESC
+LIMIT 1;
 
 -- Step 4: Show all policies on task_assignees
 SELECT '=== Current RLS Policies on task_assignees ===' as status;
