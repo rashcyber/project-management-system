@@ -40,4 +40,4 @@ ORDER BY policyname;
 SELECT '=== Check for RESTRICTIVE policies ===' as status;
 SELECT COUNT(*) as restrictive_count
 FROM pg_policies
-WHERE tablename = 'task_assignees' AND permissive = false;
+WHERE tablename = 'task_assignees' AND permissive::text = 'false';
