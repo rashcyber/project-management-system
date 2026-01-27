@@ -44,7 +44,7 @@ SELECT '=== RLS POLICIES ON task_assignees ===' as info;
 SELECT
   policyname,
   cmd as operation,
-  CASE WHEN permissive THEN 'PERMISSIVE' ELSE 'RESTRICTIVE' END as type
+  permissive::text as type
 FROM pg_policies
 WHERE tablename = 'task_assignees'
 ORDER BY cmd, policyname;
