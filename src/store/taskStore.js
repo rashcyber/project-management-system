@@ -127,12 +127,15 @@ const useTaskStore = create((set, get) => ({
   createTask: async (taskData) => {
     set({ loading: true, error: null });
     try {
+      console.log('📝 createTask called:', taskData);
       const { data: { user } } = await supabase.auth.getUser();
       const isOnline = useOfflineStore.getState().isOnline;
 
       // Extract assignee_ids from taskData (handle both single and array)
       const assignee_ids = taskData.assignee_ids || [];
       delete taskData.assignee_ids;
+
+      console.log('📝 Task assignee IDs:', assignee_ids);
 
       // If offline, queue the action
       if (!isOnline) {
@@ -197,6 +200,8 @@ const useTaskStore = create((set, get) => ({
 
       if (error) throw error;
 
+      console.log('📝 Task created:', data);
+
       // Add assignees to task_assignees junction table
       if (assignee_ids.length > 0) {
         const assigneeRecords = assignee_ids.map(userId => ({
@@ -204,11 +209,18 @@ const useTaskStore = create((set, get) => ({
           user_id: userId,
         }));
 
+        console.log('📝 Inserting assignee records:', assigneeRecords);
+
         const { error: assigneeError } = await supabase
           .from('task_assignees')
           .insert(assigneeRecords);
 
-        if (assigneeError) throw assigneeError;
+        if (assigneeError) {
+          console.error('📝 Error inserting assignees:', assigneeError);
+          throw assigneeError;
+        }
+
+        console.log('📝 Assignees inserted successfully');
 
         // Get actor's name for notification
         const { data: actorProfile } = await supabase
@@ -256,16 +268,21 @@ const useTaskStore = create((set, get) => ({
         files: []
       };
 
+      console.log('📝 Transformed task with assignees:', transformedTask);
+
       set((state) => ({
         tasks: [...state.tasks, transformedTask],
         loading: false,
       }));
+
+      console.log('📝 Task created and added to store successfully');
 
       // Log activity
       await logActivity('task_created', { task_title: taskData.title }, taskData.project_id, data.id);
 
       return { data: transformedTask, error: null };
     } catch (error) {
+      console.error('📝 Error creating task:', error);
       set({ error: error.message, loading: false });
       return { data: null, error };
     }
@@ -275,9 +292,12 @@ const useTaskStore = create((set, get) => ({
   updateTask: async (taskId, updates) => {
     set({ loading: true, error: null });
     try {
+      console.log('📝 updateTask called:', { taskId, updates });
       const isOnline = useOfflineStore.getState().isOnline;
       const oldTask = get().tasks.find(t => t.id === taskId);
       const oldAssigneeIds = oldTask?.assignees?.map(a => a.id) || [];
+
+      console.log('📝 Old assignees:', oldAssigneeIds);
 
       // If offline, queue the action and update optimistically
       if (!isOnline) {
@@ -304,8 +324,15 @@ const useTaskStore = create((set, get) => ({
         newAssigneeIds = updates.assignee_ids;
         delete updates.assignee_ids;
 
+        console.log('📝 New assignees to set:', newAssigneeIds);
+
         // Delete old assignees
-        await supabase.from('task_assignees').delete().eq('task_id', taskId);
+        const { error: deleteError } = await supabase.from('task_assignees').delete().eq('task_id', taskId);
+        if (deleteError) {
+          console.error('📝 Error deleting old assignees:', deleteError);
+          throw deleteError;
+        }
+        console.log('📝 Old assignees deleted');
 
         // Add new assignees
         if (newAssigneeIds.length > 0) {
@@ -313,7 +340,14 @@ const useTaskStore = create((set, get) => ({
             task_id: taskId,
             user_id: userId,
           }));
-          await supabase.from('task_assignees').insert(assigneeRecords);
+          console.log('📝 Inserting new assignee records:', assigneeRecords);
+
+          const { error: insertError } = await supabase.from('task_assignees').insert(assigneeRecords);
+          if (insertError) {
+            console.error('📝 Error inserting new assignees:', insertError);
+            throw insertError;
+          }
+          console.log('📝 New assignees inserted successfully');
         }
       }
 
@@ -327,10 +361,15 @@ const useTaskStore = create((set, get) => ({
         `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('📝 Error updating task:', error);
+        throw error;
+      }
+
+      console.log('📝 Task updated in database:', data);
 
       // Fetch updated assignees
-      const { data: fullData } = await supabase
+      const { data: fullData, error: fetchError } = await supabase
         .from('tasks')
         .select(`
           *,
@@ -339,10 +378,19 @@ const useTaskStore = create((set, get) => ({
         .eq('id', taskId)
         .single();
 
+      if (fetchError) {
+        console.error('📝 Error fetching updated task with assignees:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('📝 Full task data with assignees:', fullData);
+
       const transformedData = {
         ...fullData,
         assignees: fullData.task_assignees?.map(ta => ta.user) || []
       };
+
+      console.log('📝 Transformed assignees:', transformedData.assignees);
 
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -360,8 +408,10 @@ const useTaskStore = create((set, get) => ({
         const newAssignees = newAssigneeIds.filter(
           id => !oldAssigneeIds.includes(id) && id !== user.id
         );
+        console.log('📝 New assignees to notify:', newAssignees);
+
         for (const assigneeId of newAssignees) {
-          await supabase.from('notifications').insert({
+          const { error: notifError } = await supabase.from('notifications').insert({
             user_id: assigneeId,
             type: 'task_assigned',
             title: 'Task Assigned',
@@ -370,6 +420,11 @@ const useTaskStore = create((set, get) => ({
             project_id: data.project_id,
             actor_id: user.id,
           });
+          if (notifError) {
+            console.error('📝 Error creating notification:', notifError);
+          } else {
+            console.log('📝 Notification sent to:', assigneeId);
+          }
         }
       }
 
@@ -391,16 +446,21 @@ const useTaskStore = create((set, get) => ({
         }
       }
 
-      set((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === taskId ? { ...t, ...transformedData } : t
-        ),
-        currentTask:
-          state.currentTask?.id === taskId
-            ? { ...state.currentTask, ...transformedData }
-            : state.currentTask,
-        loading: false,
-      }));
+      set((state) => {
+        console.log('📝 Updating store with transformed data:', transformedData);
+        return {
+          tasks: state.tasks.map((t) =>
+            t.id === taskId ? { ...t, ...transformedData } : t
+          ),
+          currentTask:
+            state.currentTask?.id === taskId
+              ? { ...state.currentTask, ...transformedData }
+              : state.currentTask,
+          loading: false,
+        };
+      });
+
+      console.log('📝 Store updated successfully');
 
       // Log activity for status changes
       if (updates.status && updates.status !== oldTask?.status) {
