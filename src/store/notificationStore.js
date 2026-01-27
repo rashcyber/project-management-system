@@ -12,7 +12,13 @@ const useNotificationStore = create((set, get) => ({
     set({ loading: true });
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.warn('🔔 fetchNotifications: No user found');
+        set({ loading: false });
+        return;
+      }
+
+      console.log('🔔 Fetching notifications for user:', user.id);
 
       const { data, error } = await supabase
         .from('notifications')
@@ -24,13 +30,18 @@ const useNotificationStore = create((set, get) => ({
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error('🔔 Error fetching notifications:', error);
+        throw error;
+      }
 
       const unreadCount = data?.filter(n => !n.read).length || 0;
 
+      console.log(`🔔 Fetched ${data?.length || 0} notifications, ${unreadCount} unread`);
       set({ notifications: data || [], unreadCount, loading: false });
       return { data, error: null };
     } catch (error) {
+      console.error('🔔 fetchNotifications error:', error);
       set({ loading: false });
       return { data: null, error };
     }
@@ -150,6 +161,8 @@ const useNotificationStore = create((set, get) => ({
 
   // Subscribe to real-time notifications
   subscribeToNotifications: (userId) => {
+    console.log('🔔 Setting up real-time notification subscription for user:', userId);
+
     const channel = supabase
       .channel('notifications')
       .on(
@@ -161,12 +174,16 @@ const useNotificationStore = create((set, get) => ({
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
+          console.log('🔔 Real-time INSERT event received:', payload);
+
           // Skip INSERT handler if we're in the middle of clearing all notifications
           const state = get();
           if (state.isClearing) {
+            console.log('🔔 Skipping INSERT event - clear operation in progress');
             return;
           }
 
+          console.log('🔔 Processing new notification:', payload.new);
           set((prevState) => ({
             notifications: [payload.new, ...prevState.notifications],
             unreadCount: prevState.unreadCount + 1,
@@ -182,13 +199,17 @@ const useNotificationStore = create((set, get) => ({
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
+          console.log('🔔 Real-time DELETE event received:', payload);
+
           // Skip DELETE handler if we're in the middle of clearing all notifications
           // to prevent interference with the clear operation
           const state = get();
           if (state.isClearing) {
+            console.log('🔔 Skipping DELETE event - clear operation in progress');
             return;
           }
 
+          console.log('🔔 Processing deleted notification:', payload.old.id);
           set((prevState) => {
             const notif = prevState.notifications.find(n => n.id === payload.old.id);
             return {
@@ -200,9 +221,15 @@ const useNotificationStore = create((set, get) => ({
           });
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log('🔔 Subscription status:', status, err);
+        if (err) {
+          console.error('🔔 Real-time subscription error:', err);
+        }
+      });
 
     return () => {
+      console.log('🔔 Unsubscribing from real-time notifications');
       supabase.removeChannel(channel);
     };
   },

@@ -63,6 +63,15 @@ const Navbar = ({ onMenuClick, isDarkMode, onThemeToggle }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Log notification state for debugging
+  useEffect(() => {
+    console.log('🔔 Navbar notifications state:', {
+      notificationsCount: notifications.length,
+      unreadCount,
+      showNotifications,
+    });
+  }, [notifications, unreadCount, showNotifications]);
+
   const handleNotificationClick = async (notification) => {
     if (!notification.read) {
       await markAsRead(notification.id);

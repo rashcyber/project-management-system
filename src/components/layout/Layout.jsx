@@ -99,11 +99,20 @@ const Layout = () => {
   // Fetch notifications and subscribe to real-time updates
   useEffect(() => {
     if (user) {
-      fetchNotifications();
+      console.log('🔔 Layout: Initializing notifications for user:', user.id);
+      fetchNotifications().then(result => {
+        if (result?.error) {
+          console.error('🔔 Layout: Error fetching notifications:', result.error);
+        } else {
+          console.log('🔔 Layout: Notifications fetched successfully');
+        }
+      });
+
       const unsubscribe = subscribeToNotifications(user.id);
       const unsubscribeEmail = subscribeToNotificationsForEmail(user.id);
 
       return () => {
+        console.log('🔔 Layout: Cleaning up notification subscriptions');
         unsubscribe?.();
         unsubscribeEmail?.();
       };
