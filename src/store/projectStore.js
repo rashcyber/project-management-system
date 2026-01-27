@@ -197,6 +197,7 @@ const useProjectStore = create((set, get) => ({
       if (error) throw error;
 
       // Add owner as project admin
+      console.log('📦 Adding project owner as member:', { project_id: data.id, user_id: user.id });
       const { error: memberError } = await supabase.from('project_members').insert({
         project_id: data.id,
         user_id: user.id,
@@ -204,8 +205,11 @@ const useProjectStore = create((set, get) => ({
       });
 
       if (memberError) {
-        console.error('Failed to add owner as member:', memberError);
+        console.error('📦 CRITICAL ERROR: Failed to add owner as member:', memberError);
+        throw memberError;
       }
+
+      console.log('📦 Project owner added as member successfully');
 
       // Refetch the project to get it with members included
       const { data: projectWithMembers } = await supabase
