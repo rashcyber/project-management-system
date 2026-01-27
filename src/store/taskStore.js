@@ -342,12 +342,28 @@ const useTaskStore = create((set, get) => ({
           }));
           console.log('📝 Inserting new assignee records:', assigneeRecords);
 
-          const { error: insertError } = await supabase.from('task_assignees').insert(assigneeRecords);
+          // Verify auth status before insert
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          console.log('📝 Current authenticated user:', currentUser?.id);
+
+          // Try the insert with explicit error details
+          const { data: insertData, error: insertError } = await supabase
+            .from('task_assignees')
+            .insert(assigneeRecords)
+            .select();
+
           if (insertError) {
             console.error('📝 Error inserting new assignees:', insertError);
+            console.error('📝 Error code:', insertError.code);
+            console.error('📝 Error message:', insertError.message);
+            console.error('📝 Error details:', insertError.details);
+            console.error('📝 Task ID:', taskId);
+            console.error('📝 Assignee records:', assigneeRecords);
             throw insertError;
           }
+
           console.log('📝 New assignees inserted successfully');
+          console.log('📝 Insert response:', insertData);
         }
       }
 
