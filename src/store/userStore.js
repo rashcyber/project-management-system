@@ -419,8 +419,18 @@ const useUserStore = create((set, get) => ({
 
       if (error) throw error;
 
+      // Log for debugging
+      console.log('📊 Fetched invite links:', {
+        total: links?.length || 0,
+        with_deleted_at: links?.filter(l => l.deleted_at)?.length || 0,
+        without_deleted_at: links?.filter(l => !l.deleted_at)?.length || 0,
+        deleted_at_values: links?.map(l => ({ id: l.id.substring(0, 8), deleted_at: l.deleted_at })) || []
+      });
+
       // Filter out soft-deleted items (deleted_at is not null)
       const activeLinks = links?.filter(link => !link.deleted_at) || [];
+
+      console.log('✅ Returning active links:', activeLinks.length);
 
       return { data: activeLinks, error: null };
     } catch (error) {
