@@ -38,6 +38,15 @@ const useNotificationStore = create((set, get) => ({
       const unreadCount = data?.filter(n => !n.read).length || 0;
 
       console.log(`🔔 Fetched ${data?.length || 0} notifications, ${unreadCount} unread`);
+      console.log('🔔 Notification details:', data?.map(n => ({
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        read: n.read,
+        created_at: n.created_at,
+        actor: n.actor
+      })));
+
       set({ notifications: data || [], unreadCount, loading: false });
       return { data, error: null };
     } catch (error) {
