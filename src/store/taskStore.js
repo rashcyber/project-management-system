@@ -790,7 +790,6 @@ const useTaskStore = create((set, get) => ({
   // Add comment (with optional parent_id for replies)
   addComment: async (taskId, content, parentId = null) => {
     try {
-      console.log('💬 addComment called:', { taskId, content, parentId });
       const { data: { user } } = await supabase.auth.getUser();
 
       const { data, error } = await supabase
@@ -807,64 +806,21 @@ const useTaskStore = create((set, get) => ({
         `)
         .single();
 
-      if (error) {
-        console.error('💬 Error inserting comment:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('💬 Comment inserted:', data);
-
-      // Get task - either from state or fetch if needed
-      let task = get().tasks.find(t => t.id === taskId);
-      if (!task) {
-        console.log('💬 Task not in state, fetching from database');
-        const { data: fetchedTask } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('id', taskId)
+      // Get task to notify assignee
+      const task = get().tasks.find(t => t.id === taskId);
+      if (task?.assignee_id && task.assignee_id !== user.id) {
+        const { data: actorProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
           .single();
-        task = fetchedTask;
-      }
 
-      if (!task) {
-        console.warn('💬 Could not find task for notification');
-        return { data, error: null };
-      }
+        const actorName = actorProfile?.full_name || 'Someone';
 
-      console.log('💬 Task found, notifying assignees:', { assignees: task.assignees, assignee_id: task.assignee_id });
-
-      // Get actor name
-      const { data: actorProfile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
-
-      const actorName = actorProfile?.full_name || 'Someone';
-
-      // Notify ALL assignees (handle both single assignee_id and multiple assignees)
-      const assigneeIds = new Set();
-
-      // Add old-style single assignee
-      if (task.assignee_id && task.assignee_id !== user.id) {
-        assigneeIds.add(task.assignee_id);
-      }
-
-      // Add new-style multiple assignees
-      if (task.assignees && Array.isArray(task.assignees)) {
-        task.assignees.forEach(a => {
-          if (a.id !== user.id) {
-            assigneeIds.add(a.id);
-          }
-        });
-      }
-
-      console.log('💬 Notifying assignees:', Array.from(assigneeIds));
-
-      // Send notifications to all assignees
-      for (const assigneeId of assigneeIds) {
-        const { error: notifError } = await supabase.from('notifications').insert({
-          user_id: assigneeId,
+        await supabase.from('notifications').insert({
+          user_id: task.assignee_id,
           type: 'task_comment',
           title: 'New Comment',
           message: `${actorName} commented on "${task.title}"`,
@@ -873,20 +829,12 @@ const useTaskStore = create((set, get) => ({
           actor_id: user.id,
           comment_id: data.id,
         });
-        if (notifError) {
-          console.error('💬 Error sending comment notification:', notifError);
-        } else {
-          console.log('💬 Comment notification sent to:', assigneeId);
-        }
       }
 
       // Extract and notify mentioned users
-      console.log('💬 Checking for mentions in content');
       const mentionRegex = /@(\w+(?:\s+\w+)?)/g;
       const mentions = content.match(mentionRegex);
-      console.log('💬 Mentions found:', mentions);
-
-      if (mentions) {
+      if (mentions && task) {
         // Get all profiles to match mentions
         const { data: profiles } = await supabase
           .from('profiles')
@@ -900,12 +848,19 @@ const useTaskStore = create((set, get) => ({
             )
           );
 
-          console.log('💬 Mentioned users found:', mentionedUsers.map(u => u.full_name));
+          // Get actor name for mention notification
+          const { data: actorProfile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single();
+
+          const actorName = actorProfile?.full_name || 'Someone';
 
           // Create notifications for mentioned users (except the comment author)
           for (const mentionedUser of mentionedUsers) {
             if (mentionedUser.id !== user.id) {
-              const { error: mentionNotifError } = await supabase.from('notifications').insert({
+              await supabase.from('notifications').insert({
                 user_id: mentionedUser.id,
                 type: 'mention',
                 title: 'You were mentioned',
@@ -915,11 +870,6 @@ const useTaskStore = create((set, get) => ({
                 actor_id: user.id,
                 comment_id: data.id,
               });
-              if (mentionNotifError) {
-                console.error('💬 Error sending mention notification:', mentionNotifError);
-              } else {
-                console.log('💬 Mention notification sent to:', mentionedUser.full_name);
-              }
             }
           }
         }
