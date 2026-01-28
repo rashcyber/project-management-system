@@ -833,7 +833,14 @@ const useTaskStore = create((set, get) => ({
       const actorName = actorProfile?.full_name || 'Someone';
 
       // Notify ALL assignees (handle both single assignee_id and multiple assignees)
+      // ALSO notify task creator if they're different from the commenter
       const assigneeIds = new Set();
+
+      // Add task creator if not the commenter
+      if (task.created_by && task.created_by !== user.id) {
+        console.log('💬 Adding task creator to notifications:', task.created_by);
+        assigneeIds.add(task.created_by);
+      }
 
       // Add old-style single assignee
       if (task.assignee_id && task.assignee_id !== user.id) {
@@ -849,7 +856,7 @@ const useTaskStore = create((set, get) => ({
         });
       }
 
-      console.log('💬 Notifying assignees:', Array.from(assigneeIds));
+      console.log('💬 Notifying users (creator + assignees):', Array.from(assigneeIds));
 
       // Send notifications to all assignees
       for (const assigneeId of assigneeIds) {
