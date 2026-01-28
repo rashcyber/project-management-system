@@ -444,21 +444,31 @@ const useTaskStore = create((set, get) => ({
         }
       }
 
-      // Notify existing assignees if status changed
+      // Notify assignees if status changed
       if (updates.status && updates.status !== oldTask?.status) {
-        const assigneeIdsToNotify = oldAssigneeIds.filter(
-          id => id !== user.id
-        );
-        for (const assigneeId of assigneeIdsToNotify) {
-          await supabase.from('notifications').insert({
-            user_id: assigneeId,
-            type: 'task_updated',
-            title: 'Task Status Updated',
-            message: `${actorName} moved "${data.title}" to ${updates.status.replace('_', ' ')}`,
-            task_id: taskId,
-            project_id: data.project_id,
-            actor_id: user.id,
-          });
+        console.log('📝 Status changed, notifying assignees');
+
+        // Get fresh assignees from the updated task
+        const newAssignees = transformedData.assignees || [];
+        console.log('📝 New assignees to notify:', newAssignees.map(a => a.id));
+
+        for (const assignee of newAssignees) {
+          if (assignee.id !== user.id) {
+            const { error: notifError } = await supabase.from('notifications').insert({
+              user_id: assignee.id,
+              type: 'task_updated',
+              title: 'Task Status Updated',
+              message: `${actorName} moved "${data.title}" to ${updates.status.replace('_', ' ')}`,
+              task_id: taskId,
+              project_id: data.project_id,
+              actor_id: user.id,
+            });
+            if (notifError) {
+              console.error('📝 Error sending status notification:', notifError);
+            } else {
+              console.log('📝 Status update notification sent to:', assignee.id);
+            }
+          }
         }
       }
 
@@ -833,14 +843,7 @@ const useTaskStore = create((set, get) => ({
       const actorName = actorProfile?.full_name || 'Someone';
 
       // Notify ALL assignees (handle both single assignee_id and multiple assignees)
-      // ALSO notify task creator if they're different from the commenter
       const assigneeIds = new Set();
-
-      // Add task creator if not the commenter
-      if (task.created_by && task.created_by !== user.id) {
-        console.log('💬 Adding task creator to notifications:', task.created_by);
-        assigneeIds.add(task.created_by);
-      }
 
       // Add old-style single assignee
       if (task.assignee_id && task.assignee_id !== user.id) {
@@ -856,7 +859,7 @@ const useTaskStore = create((set, get) => ({
         });
       }
 
-      console.log('💬 Notifying users (creator + assignees):', Array.from(assigneeIds));
+      console.log('💬 Notifying assignees:', Array.from(assigneeIds));
 
       // Send notifications to all assignees
       for (const assigneeId of assigneeIds) {
