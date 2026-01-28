@@ -173,7 +173,7 @@ const useNotificationStore = create((set, get) => ({
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
+        async (payload) => {
           console.log('🔔 Real-time INSERT event received:', payload);
 
           // Skip INSERT handler if we're in the middle of clearing all notifications
@@ -184,8 +184,21 @@ const useNotificationStore = create((set, get) => ({
           }
 
           console.log('🔔 Processing new notification:', payload.new);
+
+          // Fetch the full notification with actor data
+          const { data: fullNotification } = await supabase
+            .from('notifications')
+            .select(`
+              *,
+              actor:profiles!notifications_actor_id_fkey(id, full_name, avatar_url)
+            `)
+            .eq('id', payload.new.id)
+            .single();
+
+          console.log('🔔 Full notification with actor:', fullNotification);
+
           set((prevState) => ({
-            notifications: [payload.new, ...prevState.notifications],
+            notifications: [fullNotification || payload.new, ...prevState.notifications],
             unreadCount: prevState.unreadCount + 1,
           }));
         }
