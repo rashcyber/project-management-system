@@ -790,7 +790,9 @@ const useTaskStore = create((set, get) => ({
   // Add comment (with optional parent_id for replies)
   addComment: async (taskId, content, parentId = null) => {
     try {
+      console.log('💬 [CRITICAL] addComment START:', { taskId, content, parentId });
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('💬 [CRITICAL] User:', user.id);
 
       const { data, error } = await supabase
         .from('comments')
@@ -806,11 +808,20 @@ const useTaskStore = create((set, get) => ({
         `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('💬 [CRITICAL] Error inserting comment:', error);
+        throw error;
+      }
+
+      console.log('💬 [CRITICAL] Comment inserted:', data);
 
       // Get task to notify assignee
       const task = get().tasks.find(t => t.id === taskId);
+      console.log('💬 [CRITICAL] Task found:', task ? { id: task.id, assignee_id: task.assignee_id, assignees: task.assignees?.map(a => a.id) } : 'NOT FOUND');
+
+      // Notify assignees
       if (task?.assignee_id && task.assignee_id !== user.id) {
+        console.log('💬 [CRITICAL] Notifying single assignee:', task.assignee_id);
         const { data: actorProfile } = await supabase
           .from('profiles')
           .select('full_name')
@@ -818,8 +829,9 @@ const useTaskStore = create((set, get) => ({
           .single();
 
         const actorName = actorProfile?.full_name || 'Someone';
+        console.log('💬 [CRITICAL] Actor name:', actorName);
 
-        await supabase.from('notifications').insert({
+        const { error: notifError } = await supabase.from('notifications').insert({
           user_id: task.assignee_id,
           type: 'task_comment',
           title: 'New Comment',
@@ -829,24 +841,75 @@ const useTaskStore = create((set, get) => ({
           actor_id: user.id,
           comment_id: data.id,
         });
+
+        if (notifError) {
+          console.error('💬 [CRITICAL] Error creating comment notification:', notifError);
+        } else {
+          console.log('💬 [CRITICAL] Comment notification created for:', task.assignee_id);
+        }
+      } else {
+        console.log('💬 [CRITICAL] No assignee_id to notify');
+      }
+
+      // Notify multiple assignees
+      if (task?.assignees && Array.isArray(task.assignees) && task.assignees.length > 0) {
+        console.log('💬 [CRITICAL] Found', task.assignees.length, 'assignees');
+
+        const { data: actorProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+
+        const actorName = actorProfile?.full_name || 'Someone';
+
+        for (const assignee of task.assignees) {
+          if (assignee.id !== user.id) {
+            console.log('💬 [CRITICAL] Notifying assignee:', assignee.id);
+            const { error: notifError } = await supabase.from('notifications').insert({
+              user_id: assignee.id,
+              type: 'task_comment',
+              title: 'New Comment',
+              message: `${actorName} commented on "${task.title}"`,
+              task_id: taskId,
+              project_id: task.project_id,
+              actor_id: user.id,
+              comment_id: data.id,
+            });
+            if (notifError) {
+              console.error('💬 [CRITICAL] Error creating notification for', assignee.id, ':', notifError);
+            } else {
+              console.log('💬 [CRITICAL] Notification created for:', assignee.id);
+            }
+          }
+        }
       }
 
       // Extract and notify mentioned users
+      console.log('💬 [CRITICAL] Checking for mentions in content');
       const mentionRegex = /@(\w+(?:\s+\w+)?)/g;
       const mentions = content.match(mentionRegex);
+      console.log('💬 [CRITICAL] Mentions found:', mentions);
+
       if (mentions && task) {
         // Get all profiles to match mentions
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name');
 
+        console.log('💬 [CRITICAL] Total profiles:', profiles?.length);
+
         if (profiles) {
           const mentionedNames = mentions.map(m => m.substring(1).toLowerCase());
+          console.log('💬 [CRITICAL] Mentioned names (lowercase):', mentionedNames);
+
           const mentionedUsers = profiles.filter(p =>
             mentionedNames.some(name =>
               p.full_name?.toLowerCase().includes(name)
             )
           );
+
+          console.log('💬 [CRITICAL] Matched users:', mentionedUsers.map(u => ({ id: u.id, name: u.full_name })));
 
           // Get actor name for mention notification
           const { data: actorProfile } = await supabase
@@ -860,7 +923,8 @@ const useTaskStore = create((set, get) => ({
           // Create notifications for mentioned users (except the comment author)
           for (const mentionedUser of mentionedUsers) {
             if (mentionedUser.id !== user.id) {
-              await supabase.from('notifications').insert({
+              console.log('💬 [CRITICAL] Creating mention notification for:', mentionedUser.id);
+              const { error: mentionError } = await supabase.from('notifications').insert({
                 user_id: mentionedUser.id,
                 type: 'mention',
                 title: 'You were mentioned',
@@ -870,10 +934,17 @@ const useTaskStore = create((set, get) => ({
                 actor_id: user.id,
                 comment_id: data.id,
               });
+              if (mentionError) {
+                console.error('💬 [CRITICAL] Error creating mention notification:', mentionError);
+              } else {
+                console.log('💬 [CRITICAL] Mention notification created for:', mentionedUser.id);
+              }
             }
           }
         }
       }
+
+      console.log('💬 [CRITICAL] addComment END - SUCCESS');
 
       set((state) => ({
         tasks: state.tasks.map((t) =>
