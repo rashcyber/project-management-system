@@ -5,6 +5,13 @@ import useOfflineStore from './offlineStore';
 import { executeOfflineQuery, getOfflineMessage } from '../lib/offlineSupabase';
 import { getCachedData, cacheData, CACHE_KEYS } from '../lib/offlineCache';
 
+// Helper function to calculate task completion percentage
+const calculateTaskCompletion = (tasks) => {
+  if (!tasks || tasks.length === 0) return 0;
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  return Math.round((completedTasks / tasks.length) * 100);
+};
+
 const useProjectStore = create((set, get) => ({
   projects: [],
   currentProject: null,
@@ -45,7 +52,8 @@ const useProjectStore = create((set, get) => ({
             role,
             joined_at,
             user:profiles(id, full_name, email, avatar_url)
-          )
+          ),
+          tasks:tasks(id, status)
         `)
         .order('created_at', { ascending: false });
 
@@ -76,12 +84,18 @@ const useProjectStore = create((set, get) => ({
         );
       }
 
+      // Calculate task completion percentage for each project
+      const projectsWithCompletion = (filteredProjects || []).map(project => ({
+        ...project,
+        task_completion_percentage: calculateTaskCompletion(project.tasks),
+      }));
+
       // Cache the projects
-      if (filteredProjects) {
-        cacheData(CACHE_KEYS.PROJECTS, filteredProjects);
+      if (projectsWithCompletion) {
+        cacheData(CACHE_KEYS.PROJECTS, projectsWithCompletion);
       }
 
-      set({ projects: filteredProjects || [], loading: false });
+      set({ projects: projectsWithCompletion || [], loading: false });
       return { data: filteredProjects, error: null };
     } catch (error) {
       // If offline and no cache, return friendly error
@@ -130,7 +144,8 @@ const useProjectStore = create((set, get) => ({
             role,
             joined_at,
             user:profiles(id, full_name, email, avatar_url)
-          )
+          ),
+          tasks:tasks(id, status)
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(offset, offset + pageSize - 1);
@@ -161,21 +176,27 @@ const useProjectStore = create((set, get) => ({
         );
       }
 
+      // Calculate task completion percentage for each project
+      const projectsWithCompletion = (filteredProjects || []).map(project => ({
+        ...project,
+        task_completion_percentage: calculateTaskCompletion(project.tasks),
+      }));
+
       // Cache the projects on first page
-      if (pageNumber === 0 && filteredProjects) {
-        cacheData(CACHE_KEYS.PROJECTS, filteredProjects);
+      if (pageNumber === 0 && projectsWithCompletion) {
+        cacheData(CACHE_KEYS.PROJECTS, projectsWithCompletion);
       }
 
       const hasMore = (pageNumber + 1) * pageSize < (count || 0);
 
       set((state) => ({
-        projects: pageNumber === 0 ? filteredProjects : [...state.projects, ...filteredProjects],
+        projects: pageNumber === 0 ? projectsWithCompletion : [...state.projects, ...projectsWithCompletion],
         projectsPage: pageNumber,
         projectsHasMore: hasMore,
         loading: false,
       }));
 
-      return { data: filteredProjects, error: null, hasMore };
+      return { data: projectsWithCompletion, error: null, hasMore };
     } catch (error) {
       // If offline and no cache, return friendly error
       const isOnline = useOfflineStore.getState().isOnline;

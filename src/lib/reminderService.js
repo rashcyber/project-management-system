@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { sendTaskReminderEmail } from './sendgridService';
 
 /**
  * Reminder Service
@@ -87,7 +88,7 @@ export const checkAndCreateReminders = async () => {
             });
           }
 
-          // Create notifications for each user
+          // Create notifications for each user and send emails
           for (const userId of usersToNotify) {
             const reminderLabel = getReminderLabel(reminder);
             notificationsToCreate.push({
@@ -99,6 +100,28 @@ export const checkAndCreateReminders = async () => {
               project_id: task.project_id,
               actor_id: user.id,
             });
+
+            // Send email notification asynchronously (don't block)
+            (async () => {
+              try {
+                const { data: userProfile } = await supabase
+                  .from('profiles')
+                  .select('email, full_name')
+                  .eq('id', userId)
+                  .single();
+
+                if (userProfile?.email) {
+                  await sendTaskReminderEmail(
+                    userProfile.email,
+                    userProfile.full_name || 'User',
+                    task.title,
+                    reminder.type
+                  );
+                }
+              } catch (error) {
+                console.error('Failed to send reminder email:', error);
+              }
+            })();
           }
 
           // Mark reminder as sent

@@ -13,6 +13,8 @@ import {
   UserPlus,
   X,
   Check,
+  Activity,
+  TrendingUp,
 } from 'lucide-react';
 import { Button, Input, Modal, Avatar, Loading, SkeletonLoader } from '../components/common';
 import useProjectStore from '../store/projectStore';
@@ -258,6 +260,25 @@ const Projects = () => {
                 {project.description || 'No description'}
               </p>
 
+              {/* Task Progress Bar */}
+              <div className="project-progress-section">
+                <div className="progress-header">
+                  <span className="progress-label">Progress</span>
+                  <span className="progress-percent">
+                    {project.task_completion_percentage ? Math.round(project.task_completion_percentage) : 0}%
+                  </span>
+                </div>
+                <div className="progress-bar-container">
+                  <div
+                    className="progress-bar-fill"
+                    style={{
+                      width: `${project.task_completion_percentage ? Math.round(project.task_completion_percentage) : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Activity Badge & Meta */}
               <div className="project-meta">
                 <div className="meta-item">
                   <Calendar size={14} />
@@ -267,6 +288,13 @@ const Projects = () => {
                   <Users size={14} />
                   <span>{project.project_members?.length || 1} members</span>
                 </div>
+                {/* Activity Badge - Shows if updated in last 24 hours */}
+                {project.updated_at && new Date(project.updated_at).getTime() > Date.now() - 24 * 60 * 60 * 1000 && (
+                  <div className="activity-badge">
+                    <Activity size={12} />
+                    <span>Active</span>
+                  </div>
+                )}
               </div>
 
               <div className="project-card-footer">
