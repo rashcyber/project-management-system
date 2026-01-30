@@ -14,7 +14,7 @@ import {
   X,
   Check,
 } from 'lucide-react';
-import { Button, Input, Modal, Avatar, Loading } from '../components/common';
+import { Button, Input, Modal, Avatar, Loading, SkeletonLoader } from '../components/common';
 import useProjectStore from '../store/projectStore';
 import useAuthStore from '../store/authStore';
 import useUserStore from '../store/userStore';
@@ -25,7 +25,7 @@ import './Projects.css';
 
 const Projects = () => {
   const navigate = useNavigate();
-  const { projects, loading, fetchProjects, deleteProject } = useProjectStore();
+  const { projects, loading, projectsHasMore, fetchProjectsPage, loadMoreProjects, resetProjectsPagination, deleteProject } = useProjectStore();
   const { profile, isAdmin } = useAuthStore();
   const { users, fetchUsers } = useUserStore();
 
@@ -37,14 +37,22 @@ const Projects = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [memberSearch, setMemberSearch] = useState('');
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Debounce search input for performance
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   useEffect(() => {
-    fetchProjects();
+    resetProjectsPagination();
+    fetchProjectsPage(0);
     fetchUsers();
-  }, [fetchProjects, fetchUsers]);
+  }, []);
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    await loadMoreProjects();
+    setLoadingMore(false);
+  };
 
   const filteredProjects = projects.filter((project) =>
     project.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
@@ -177,8 +185,10 @@ const Projects = () => {
       </div>
 
       {/* Projects Grid */}
-      {loading ? (
-        <div className="projects-loading">Loading projects...</div>
+      {loading && projects.length === 0 ? (
+        <div className="projects-grid">
+          <SkeletonLoader type="project-card" count={6} />
+        </div>
       ) : filteredProjects.length === 0 ? (
         <div className="projects-empty">
           <FolderKanban size={64} />
@@ -299,6 +309,19 @@ const Projects = () => {
             </div>
           ))}
         </div>
+
+        {/* Load More Button */}
+        {projectsHasMore && (
+          <div className="projects-load-more">
+            <Button
+              variant="secondary"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? 'Loading...' : 'Load More Projects'}
+            </Button>
+          </div>
+        )}
       )}
 
       {/* Delete Confirmation Modal */}

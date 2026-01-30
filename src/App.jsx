@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout';
 import ToastContainer from './components/common/ToastContainer';
+import { startReminderChecker, stopReminderChecker } from './lib/reminderService';
 
 // Pages
 import Login from './pages/Login';
@@ -27,6 +28,16 @@ import Settings from './pages/Settings';
 import './App.css';
 
 function App() {
+  useEffect(() => {
+    // Start reminder checker when app initializes
+    const stopReminder = startReminderChecker(5 * 60 * 1000); // Check every 5 minutes
+
+    // Cleanup on unmount
+    return () => {
+      stopReminderChecker();
+    };
+  }, []);
+
   return (
     <Router>
       <Routes>

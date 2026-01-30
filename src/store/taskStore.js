@@ -62,6 +62,53 @@ const getNextDate = (currentDate, pattern) => {
   return nextDate;
 };
 
+// Simple in-memory profile cache to reduce database queries
+const profileCache = new Map();
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+
+const getCachedProfile = async (userId) => {
+  const now = Date.now();
+  const cached = profileCache.get(userId);
+
+  if (cached && now - cached.timestamp < CACHE_EXPIRY) {
+    console.log('💬 [CACHE] Using cached profile for:', userId);
+    return cached.data;
+  }
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .eq('id', userId)
+    .single();
+
+  if (data) {
+    profileCache.set(userId, { data, timestamp: now });
+  }
+
+  return data;
+};
+
+const getAllProfilesCache = async () => {
+  const cacheKey = 'ALL_PROFILES';
+  const now = Date.now();
+  const cached = profileCache.get(cacheKey);
+
+  if (cached && now - cached.timestamp < CACHE_EXPIRY) {
+    console.log('💬 [CACHE] Using cached all profiles');
+    return cached.data;
+  }
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, full_name');
+
+  if (data) {
+    profileCache.set(cacheKey, { data, timestamp: now });
+  }
+
+  return data || [];
+};
+
 const useTaskStore = create((set, get) => ({
   tasks: [],
   currentTask: null,
@@ -819,19 +866,18 @@ const useTaskStore = create((set, get) => ({
       const task = get().tasks.find(t => t.id === taskId);
       console.log('💬 [CRITICAL] Task found:', task ? { id: task.id, assignee_id: task.assignee_id, assignees: task.assignees?.map(a => a.id) } : 'NOT FOUND');
 
-      // Notify assignees
+      // Fetch actor profile once (reuse for all notifications) - use cache
+      const actorProfile = await getCachedProfile(user.id);
+      const actorName = actorProfile?.full_name || 'Someone';
+      console.log('💬 [CRITICAL] Actor name:', actorName);
+
+      // Collect all notification payloads to batch insert
+      const notificationPayloads = [];
+
+      // Add notifications for single assignee
       if (task?.assignee_id && task.assignee_id !== user.id) {
-        console.log('💬 [CRITICAL] Notifying single assignee:', task.assignee_id);
-        const { data: actorProfile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
-
-        const actorName = actorProfile?.full_name || 'Someone';
-        console.log('💬 [CRITICAL] Actor name:', actorName);
-
-        const { error: notifError } = await supabase.from('notifications').insert({
+        console.log('💬 [CRITICAL] Queueing single assignee notification:', task.assignee_id);
+        notificationPayloads.push({
           user_id: task.assignee_id,
           type: 'task_comment',
           title: 'New Comment',
@@ -841,32 +887,16 @@ const useTaskStore = create((set, get) => ({
           actor_id: user.id,
           comment_id: data.id,
         });
-
-        if (notifError) {
-          console.error('💬 [CRITICAL] Error creating comment notification:', notifError);
-        } else {
-          console.log('💬 [CRITICAL] Comment notification created for:', task.assignee_id);
-        }
-      } else {
-        console.log('💬 [CRITICAL] No assignee_id to notify');
       }
 
-      // Notify multiple assignees
+      // Add notifications for multiple assignees
       if (task?.assignees && Array.isArray(task.assignees) && task.assignees.length > 0) {
         console.log('💬 [CRITICAL] Found', task.assignees.length, 'assignees');
 
-        const { data: actorProfile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
-
-        const actorName = actorProfile?.full_name || 'Someone';
-
         for (const assignee of task.assignees) {
           if (assignee.id !== user.id) {
-            console.log('💬 [CRITICAL] Notifying assignee:', assignee.id);
-            const { error: notifError } = await supabase.from('notifications').insert({
+            console.log('💬 [CRITICAL] Queueing assignee notification:', assignee.id);
+            notificationPayloads.push({
               user_id: assignee.id,
               type: 'task_comment',
               title: 'New Comment',
@@ -876,26 +906,19 @@ const useTaskStore = create((set, get) => ({
               actor_id: user.id,
               comment_id: data.id,
             });
-            if (notifError) {
-              console.error('💬 [CRITICAL] Error creating notification for', assignee.id, ':', notifError);
-            } else {
-              console.log('💬 [CRITICAL] Notification created for:', assignee.id);
-            }
           }
         }
       }
 
-      // Extract and notify mentioned users
+      // Extract and queue notifications for mentioned users
       console.log('💬 [CRITICAL] Checking for mentions in content');
       const mentionRegex = /@(\w+(?:\s+\w+)?)/g;
       const mentions = content.match(mentionRegex);
       console.log('💬 [CRITICAL] Mentions found:', mentions);
 
       if (mentions && task) {
-        // Get all profiles to match mentions
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name');
+        // Get all profiles to match mentions - use cache
+        const profiles = await getAllProfilesCache();
 
         console.log('💬 [CRITICAL] Total profiles:', profiles?.length);
 
@@ -911,20 +934,11 @@ const useTaskStore = create((set, get) => ({
 
           console.log('💬 [CRITICAL] Matched users:', mentionedUsers.map(u => ({ id: u.id, name: u.full_name })));
 
-          // Get actor name for mention notification
-          const { data: actorProfile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', user.id)
-            .single();
-
-          const actorName = actorProfile?.full_name || 'Someone';
-
-          // Create notifications for mentioned users (except the comment author)
+          // Queue notifications for mentioned users (except the comment author)
           for (const mentionedUser of mentionedUsers) {
             if (mentionedUser.id !== user.id) {
-              console.log('💬 [CRITICAL] Creating mention notification for:', mentionedUser.id);
-              const { error: mentionError } = await supabase.from('notifications').insert({
+              console.log('💬 [CRITICAL] Queueing mention notification for:', mentionedUser.id);
+              notificationPayloads.push({
                 user_id: mentionedUser.id,
                 type: 'mention',
                 title: 'You were mentioned',
@@ -934,13 +948,22 @@ const useTaskStore = create((set, get) => ({
                 actor_id: user.id,
                 comment_id: data.id,
               });
-              if (mentionError) {
-                console.error('💬 [CRITICAL] Error creating mention notification:', mentionError);
-              } else {
-                console.log('💬 [CRITICAL] Mention notification created for:', mentionedUser.id);
-              }
             }
           }
+        }
+      }
+
+      // Batch insert all notifications at once
+      if (notificationPayloads.length > 0) {
+        console.log('💬 [CRITICAL] Batch inserting', notificationPayloads.length, 'notifications');
+        const { error: batchError } = await supabase
+          .from('notifications')
+          .insert(notificationPayloads);
+
+        if (batchError) {
+          console.error('💬 [CRITICAL] Error batch creating notifications:', batchError);
+        } else {
+          console.log('💬 [CRITICAL] Batch notifications created successfully');
         }
       }
 

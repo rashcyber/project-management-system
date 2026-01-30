@@ -318,3 +318,101 @@
     max-height: 200px;
   }
 }
+
+/* Template Mode */
+.task-form.template-mode {
+  gap: 1rem;
+}
+
+.template-mode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.template-mode-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.form-actions-left,
+.form-actions-right {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.form-actions-left {
+  flex: 1;
+}
+
+.form-actions-right {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.form-actions button {
+  flex: 0 1 auto;
+}
+
+/* Save Template Modal */
+.save-template-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modal-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+/* Recurrence Button */
+.recurrence-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions-left,
+  .form-actions-right {
+    width: 100%;
+  }
+
+  .form-actions-right {
+    justify-content: stretch;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+}

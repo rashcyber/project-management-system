@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Calendar, Flag, User, X, Check, Search, Repeat2 } from 'lucide-react';
+import { Calendar, Flag, User, X, Check, Search, Repeat2, Copy } from 'lucide-react';
 import { Button, Input, Avatar, Modal } from '../common';
 import { RecurrenceSettings } from '../RecurrenceSettings';
+import { ReminderSettings } from '../ReminderSettings';
+import { TemplateManager } from '../TemplateManager';
 import useTaskStore from '../../store/taskStore';
+import useTemplateStore from '../../store/templateStore';
 import { toast } from '../../store/toastStore';
 import './TaskForm.css';
 
@@ -24,11 +27,16 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
     due_date: '',
     assignee_ids: [],
   });
+  const [reminders, setReminders] = useState([]);
   const [errors, setErrors] = useState({});
   const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
   const [assigneeSearch, setAssigneeSearch] = useState('');
   const [showRecurrenceModal, setShowRecurrenceModal] = useState(false);
   const [recurrencePattern, setRecurrencePattern] = useState(null);
+  const [showTemplateMode, setShowTemplateMode] = useState(false);
+  const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const { saveTaskAsTemplate } = useTemplateStore();
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -52,6 +60,7 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
         due_date: task.due_date || '',
         assignee_ids: task.assignees?.map(a => a.id) || [],
       });
+      setReminders(task.reminders || []);
     }
   }, [task, initialStatus]);
 
@@ -108,6 +117,7 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
       project_id: projectId,
       assignee_ids: formData.assignee_ids,
       due_date: formData.due_date || null,
+      reminders: reminders.length > 0 ? reminders : null,
     };
 
     let result;
@@ -125,6 +135,67 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
     toast.success(task ? 'Task updated successfully!' : 'Task created successfully!');
     onClose();
   };
+
+  const handleSelectTemplate = (template) => {
+    // Populate form with template data
+    setFormData((prev) => ({
+      ...prev,
+      title: template.title_template || '',
+      description: template.description_template || '',
+      priority: template.priority || 'medium',
+      assignee_ids: template.assignee_ids || [],
+    }));
+    setShowTemplateMode(false);
+    toast.success('Template applied!');
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!templateName.trim()) {
+      toast.error('Template name is required');
+      return;
+    }
+
+    const templateData = {
+      title: formData.title,
+      description: formData.description,
+      priority: formData.priority,
+      estimated_hours: formData.estimated_hours,
+      subtasks: formData.subtasks || [],
+      assignees: formData.assignee_ids || [],
+      task_labels: formData.labels || [],
+    };
+
+    const { error } = await saveTaskAsTemplate(templateData, templateName, false);
+    if (error) {
+      toast.error('Failed to save template');
+    } else {
+      toast.success('Task saved as template!');
+      setShowSaveAsTemplate(false);
+      setTemplateName('');
+    }
+  };
+
+  if (showTemplateMode) {
+    return (
+      <div className="task-form template-mode">
+        <div className="template-mode-header">
+          <h3>Choose a Template</h3>
+          <Button
+            type="button"
+            variant="secondary"
+            size="small"
+            onClick={() => setShowTemplateMode(false)}
+          >
+            Back
+          </Button>
+        </div>
+        <TemplateManager
+          onSelectTemplate={handleSelectTemplate}
+          projectId={projectId}
+        />
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="task-form">
@@ -302,13 +373,46 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
         </Button>
       </div>
 
+      {/* Reminders Section */}
+      {formData.due_date && (
+        <ReminderSettings
+          reminders={reminders}
+          onChange={setReminders}
+          dueDate={formData.due_date}
+        />
+      )}
+
       <div className="form-actions">
-        <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" variant="primary" loading={loading}>
-          {task ? 'Update Task' : 'Create Task'}
-        </Button>
+        <div className="form-actions-left">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          {!task && (
+            <Button
+              type="button"
+              variant="ghost"
+              icon={<Copy size={14} />}
+              onClick={() => setShowTemplateMode(true)}
+            >
+              From Template
+            </Button>
+          )}
+        </div>
+        <div className="form-actions-right">
+          {!task && (
+            <Button
+              type="button"
+              variant="secondary"
+              icon={<Copy size={14} />}
+              onClick={() => setShowSaveAsTemplate(true)}
+            >
+              Save as Template
+            </Button>
+          )}
+          <Button type="submit" variant="primary" loading={loading}>
+            {task ? 'Update Task' : 'Create Task'}
+          </Button>
+        </div>
       </div>
 
       {/* Recurrence Settings Modal */}
@@ -326,6 +430,49 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
           }}
           onClose={() => setShowRecurrenceModal(false)}
         />
+      </Modal>
+
+      {/* Save as Template Modal */}
+      <Modal
+        isOpen={showSaveAsTemplate}
+        onClose={() => {
+          setShowSaveAsTemplate(false);
+          setTemplateName('');
+        }}
+        title="Save as Template"
+        size="small"
+      >
+        <div className="save-template-modal">
+          <p className="modal-description">
+            Save this task structure as a template for future use. You can create tasks from this template quickly.
+          </p>
+          <Input
+            label="Template Name"
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            placeholder="e.g., Bug Report Template"
+            autoFocus
+          />
+          <div className="modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowSaveAsTemplate(false);
+                setTemplateName('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSaveAsTemplate}
+            >
+              Save Template
+            </Button>
+          </div>
+        </div>
       </Modal>
     </form>
   );

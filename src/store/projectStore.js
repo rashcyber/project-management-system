@@ -11,6 +11,9 @@ const useProjectStore = create((set, get) => ({
   members: [],
   loading: false,
   error: null,
+  projectsPage: 0,
+  projectsHasMore: true,
+  projectsPageSize: 10,
 
   setCurrentProject: (project) => set({ currentProject: project }),
 
@@ -94,6 +97,117 @@ const useProjectStore = create((set, get) => ({
       set({ error: error.message, loading: false });
       return { data: null, error };
     }
+  },
+
+  // Fetch projects with pagination (for load-more functionality)
+  fetchProjectsPage: async (pageNumber = 0) => {
+    const pageSize = get().projectsPageSize;
+    const offset = pageNumber * pageSize;
+
+    set({ loading: true, error: null });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { profile } = useAuthStore.getState();
+      const isOnline = useOfflineStore.getState().isOnline;
+
+      // Check cache first if offline
+      if (!isOnline && pageNumber === 0) {
+        const cached = getCachedData(CACHE_KEYS.PROJECTS);
+        if (cached) {
+          console.log('[OFFLINE] Using cached projects');
+          set({ projects: cached.data || [], loading: false });
+          return { data: cached.data, error: null, fromCache: true };
+        }
+      }
+
+      let query = supabase
+        .from('projects')
+        .select(`
+          *,
+          owner:profiles!projects_owner_id_fkey(id, full_name, email, avatar_url),
+          project_members(
+            user_id,
+            role,
+            joined_at,
+            user:profiles(id, full_name, email, avatar_url)
+          )
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(offset, offset + pageSize - 1);
+
+      // SECURITY: Apply workspace and role-based filtering
+      let { data, error, count } = await query;
+
+      if (error) throw error;
+
+      // Filter projects based on role and workspace (client-side)
+      let filteredProjects = data || [];
+
+      if (profile?.role === 'super_admin') {
+        // Super Admin: See ALL projects
+        filteredProjects = data || [];
+      } else if (profile?.role === 'admin') {
+        // Admin: Projects they own OR are members of
+        filteredProjects = (data || []).filter(project =>
+          (project.owner_id === user.id ||
+           project.project_members?.some(member => member.user_id === user.id)) &&
+          project.workspace_id === profile?.workspace_id
+        );
+      } else {
+        // Member/Manager: ONLY projects they're members of
+        filteredProjects = (data || []).filter(project =>
+          project.project_members?.some(member => member.user_id === user.id) &&
+          project.workspace_id === profile?.workspace_id
+        );
+      }
+
+      // Cache the projects on first page
+      if (pageNumber === 0 && filteredProjects) {
+        cacheData(CACHE_KEYS.PROJECTS, filteredProjects);
+      }
+
+      const hasMore = (pageNumber + 1) * pageSize < (count || 0);
+
+      set((state) => ({
+        projects: pageNumber === 0 ? filteredProjects : [...state.projects, ...filteredProjects],
+        projectsPage: pageNumber,
+        projectsHasMore: hasMore,
+        loading: false,
+      }));
+
+      return { data: filteredProjects, error: null, hasMore };
+    } catch (error) {
+      // If offline and no cache, return friendly error
+      const isOnline = useOfflineStore.getState().isOnline;
+      if (!isOnline && pageNumber === 0) {
+        const cached = getCachedData(CACHE_KEYS.PROJECTS);
+        if (cached) {
+          set({ projects: cached.data || [], loading: false });
+          return { data: cached.data, error: null, fromCache: true };
+        }
+      }
+
+      set({ error: error.message, loading: false });
+      return { data: null, error };
+    }
+  },
+
+  // Load more projects (for infinite scroll)
+  loadMoreProjects: async () => {
+    const { projectsPage, projectsHasMore } = get();
+
+    if (!projectsHasMore) return { data: [], error: null };
+
+    return get().fetchProjectsPage(projectsPage + 1);
+  },
+
+  // Reset pagination
+  resetProjectsPagination: () => {
+    set({
+      projects: [],
+      projectsPage: 0,
+      projectsHasMore: true,
+    });
   },
 
   // Fetch single project by ID with access control
