@@ -308,20 +308,20 @@ const Projects = () => {
               </div>
             </div>
           ))}
-        </div>
 
-        {/* Load More Button */}
-        {projectsHasMore && (
-          <div className="projects-load-more">
-            <Button
-              variant="secondary"
-              onClick={handleLoadMore}
-              disabled={loadingMore}
-            >
-              {loadingMore ? 'Loading...' : 'Load More Projects'}
-            </Button>
-          </div>
-        )}
+          {/* Load More Button */}
+          {projectsHasMore && (
+            <div className="projects-load-more">
+              <Button
+                variant="secondary"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? 'Loading...' : 'Load More Projects'}
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Delete Confirmation Modal */}
