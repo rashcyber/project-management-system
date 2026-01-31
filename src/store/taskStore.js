@@ -382,12 +382,6 @@ const useTaskStore = create((set, get) => ({
         delete updates.assignee_ids;
 
         console.log('📝 New assignees to set:', newAssigneeIds);
-      }
-
-      // Only include reminders if they exist and are not empty
-      if (updates.reminders && !Array.isArray(updates.reminders) || (Array.isArray(updates.reminders) && updates.reminders.length === 0)) {
-        delete updates.reminders;
-      }
 
         // Delete old assignees
         const { error: deleteError } = await supabase.from('task_assignees').delete().eq('task_id', taskId);
@@ -428,6 +422,11 @@ const useTaskStore = create((set, get) => ({
           console.log('📝 New assignees inserted successfully');
           console.log('📝 Insert response:', insertData);
         }
+      }
+
+      // Only include reminders if they exist and are not empty
+      if (updates.reminders && !Array.isArray(updates.reminders) || (Array.isArray(updates.reminders) && updates.reminders.length === 0)) {
+        delete updates.reminders;
       }
 
       const { data, error } = await supabase
