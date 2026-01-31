@@ -76,6 +76,20 @@ const useAuthStore = create(
               profile,
               loading: false,
             });
+
+            // Send welcome email asynchronously (don't block signup)
+            try {
+              await supabase.functions.invoke('send-email', {
+                body: {
+                  type: 'welcome',
+                  recipientEmail: email,
+                  recipientName: fullName,
+                },
+              });
+            } catch (emailError) {
+              console.warn('Failed to send welcome email:', emailError);
+              // Don't throw error, signup is already successful
+            }
           }
 
           return { data, error: null };

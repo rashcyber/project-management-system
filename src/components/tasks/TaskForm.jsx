@@ -138,12 +138,18 @@ const TaskForm = ({ projectId, task, initialStatus, onClose, members }) => {
 
   const handleSelectTemplate = (template) => {
     // Populate form with template data
-    setFormData((prev) => ({
-      ...prev,
+    const newFormData = {
       title: template.title_template || '',
       description: template.description_template || '',
       priority: template.priority || 'medium',
+      status: template.status || initialStatus || 'not_started',
+      due_date: template.due_date || '',
       assignee_ids: template.assignee_ids || [],
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      ...newFormData,
     }));
     setShowTemplateMode(false);
     toast.success('Template applied!');

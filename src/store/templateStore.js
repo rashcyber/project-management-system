@@ -270,6 +270,8 @@ const useTemplateStore = create((set, get) => ({
         title_template: task.title,
         description_template: task.description,
         priority: task.priority,
+        status: task.status,
+        due_date: task.due_date,
         estimated_hours: task.estimated_hours,
         subtasks: task.subtasks?.map((s) => ({
           title: s.title,
