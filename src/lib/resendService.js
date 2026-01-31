@@ -8,8 +8,14 @@
  */
 
 const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY;
-const FROM_EMAIL = 'noreply@taskflow.app'; // Change to your domain
-const FROM_NAME = 'TaskFlow';
+
+// Email Configuration - CUSTOMIZE THESE
+const FROM_EMAIL = import.meta.env.VITE_FROM_EMAIL || 'onboarding@resend.dev'; // Default Resend email, replace with your domain
+const FROM_NAME = import.meta.env.VITE_FROM_NAME || 'Task Management App'; // Your app name
+
+// For production, configure:
+// VITE_FROM_EMAIL=noreply@yourdomain.com (after verifying domain in Resend)
+// VITE_FROM_NAME=Your App Name
 
 /**
  * Send email via Resend
