@@ -207,11 +207,16 @@ const Projects = () => {
       ) : (
         <div className="projects-grid">
           {filteredProjects.map((project) => (
-            <div key={project.id} className="project-card" style={{ borderLeftColor: project.color || '#3b82f6', borderLeftWidth: '4px' }}>
-              <div
-                className="project-color-bar"
-                style={{ backgroundColor: project.color || '#3b82f6' }}
-              />
+            <div
+              key={project.id}
+              className="project-card"
+              style={{
+                borderLeftColor: project.color || '#3b82f6',
+                borderLeftWidth: '4px',
+                borderTopColor: project.color || '#3b82f6',
+                borderTopWidth: '3px'
+              }}
+            >
 
               <div className="project-card-header">
                 <h3

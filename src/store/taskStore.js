@@ -178,11 +178,14 @@ const useTaskStore = create((set, get) => ({
       const { data: { user } } = await supabase.auth.getUser();
       const isOnline = useOfflineStore.getState().isOnline;
 
-      // Extract assignee_ids from taskData (handle both single and array)
+      // Extract assignee_ids and reminders from taskData
       const assignee_ids = taskData.assignee_ids || [];
+      const reminders = taskData.reminders || null;
       delete taskData.assignee_ids;
+      delete taskData.reminders;
 
       console.log('📝 Task assignee IDs:', assignee_ids);
+      console.log('📝 Task reminders:', reminders);
 
       // If offline, queue the action
       if (!isOnline) {
@@ -232,13 +235,20 @@ const useTaskStore = create((set, get) => ({
 
       const maxPosition = maxPosData?.[0]?.position ?? -1;
 
+      const insertData = {
+        ...taskData,
+        created_by: user.id,
+        position: maxPosition + 1,
+      };
+
+      // Only include reminders if they exist and are not empty
+      if (reminders && reminders.length > 0) {
+        insertData.reminders = reminders;
+      }
+
       const { data, error } = await supabase
         .from('tasks')
-        .insert({
-          ...taskData,
-          created_by: user.id,
-          position: maxPosition + 1,
-        })
+        .insert(insertData)
         .select(`
           *,
           creator:profiles!tasks_created_by_fkey(id, full_name, email, avatar_url)
@@ -365,13 +375,19 @@ const useTaskStore = create((set, get) => ({
         return { data: { id: taskId, ...updates }, error: null, queued: true, actionId };
       }
 
-      // Handle assignee_ids update (multiple assignees)
+      // Handle assignee_ids and reminders update
       let newAssigneeIds = [];
       if (updates.assignee_ids) {
         newAssigneeIds = updates.assignee_ids;
         delete updates.assignee_ids;
 
         console.log('📝 New assignees to set:', newAssigneeIds);
+      }
+
+      // Only include reminders if they exist and are not empty
+      if (updates.reminders && !Array.isArray(updates.reminders) || (Array.isArray(updates.reminders) && updates.reminders.length === 0)) {
+        delete updates.reminders;
+      }
 
         // Delete old assignees
         const { error: deleteError } = await supabase.from('task_assignees').delete().eq('task_id', taskId);

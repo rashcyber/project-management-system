@@ -181,21 +181,14 @@
 }
 
 .project-color-bar {
-  height: 5px;
-  width: 100%;
-  background: linear-gradient(90deg, currentColor 0%, currentColor 100%);
-  transition: height 0.3s ease;
-}
-
-.project-card:hover .project-color-bar {
-  height: 6px;
+  display: none;
 }
 
 .project-card-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 1.5rem 1.5rem 0;
+  padding: 1rem 1.25rem 0;
   gap: 1rem;
 }
 
@@ -285,20 +278,20 @@
 }
 
 .project-description {
-  padding: 1rem 1.5rem 0;
-  font-size: 0.875rem;
+  padding: 0.75rem 1.25rem 0;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.5;
+  line-height: 1.4;
   flex: 1;
 }
 
 /* Task Progress Section */
 .project-progress-section {
-  padding: 1rem 1.5rem 0;
+  padding: 0.75rem 1.25rem 0;
 }
 
 .progress-header {
@@ -309,14 +302,14 @@
 }
 
 .progress-label {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: #fff;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   background-color: #f97316;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
   display: inline-block;
 }
 
@@ -328,19 +321,19 @@
 
 .progress-bar-container {
   width: 100%;
-  height: 4px;
+  height: 3px;
   background: var(--bg-secondary);
-  border-radius: 2px;
+  border-radius: 1.5px;
   overflow: hidden;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .progress-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
-  border-radius: 2px;
+  border-radius: 1.5px;
   transition: width 0.3s ease;
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
 }
 
 /* Activity Badge */
@@ -374,8 +367,9 @@
 .project-meta {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  padding: 0 1.25rem 1rem;
+  gap: 1rem;
+  padding: 0 1.25rem 0.75rem;
+  font-size: 0.75rem;
 }
 
 .meta-item {
@@ -390,10 +384,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   border-top: 1px solid var(--border-light);
   background-color: linear-gradient(to right, var(--bg-secondary), rgba(255, 255, 255, 0));
-  gap: 1rem;
+  gap: 0.75rem;
   margin-top: auto;
   transition: background-color 0.3s ease;
 }

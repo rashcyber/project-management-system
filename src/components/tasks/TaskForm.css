@@ -54,6 +54,12 @@
   transition: all var(--transition-fast);
 }
 
+/* Fix date picker calendar icon visibility in dark mode */
+.form-input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.8);
+  cursor: pointer;
+}
+
 .form-input:focus,
 .form-select:focus {
   outline: none;
