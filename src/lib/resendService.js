@@ -11,7 +11,7 @@ const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY;
 
 // Email Configuration - CUSTOMIZE THESE
 const FROM_EMAIL = import.meta.env.VITE_FROM_EMAIL || 'onboarding@resend.dev'; // Default Resend email, replace with your domain
-const FROM_NAME = import.meta.env.VITE_FROM_NAME || 'Task Management App'; // Your app name
+const FROM_NAME = import.meta.env.VITE_FROM_NAME || 'ProjectFlow'; // Your app name
 
 // For production, configure:
 // VITE_FROM_EMAIL=noreply@yourdomain.com (after verifying domain in Resend)
@@ -114,7 +114,7 @@ export const sendTaskReminderEmail = async (userEmail, userName, taskTitle, remi
         </p>
       </div>
       <div class="footer">
-        <p>© 2026 TaskFlow. All rights reserved.</p>
+        <p>© 2026 ProjectFlow. All rights reserved.</p>
         <p>This is an automated message. Please do not reply to this email.</p>
       </div>
     </div>
@@ -178,7 +178,7 @@ export const sendCommentNotificationEmail = async (userEmail, userName, commente
         </p>
       </div>
       <div class="footer">
-        <p>© 2026 TaskFlow. All rights reserved.</p>
+        <p>© 2026 ProjectFlow. All rights reserved.</p>
         <p>This is an automated message. Please do not reply to this email.</p>
       </div>
     </div>
@@ -240,7 +240,7 @@ export const sendMentionNotificationEmail = async (userEmail, userName, mentione
         </p>
       </div>
       <div class="footer">
-        <p>© 2026 TaskFlow. All rights reserved.</p>
+        <p>© 2026 ProjectFlow. All rights reserved.</p>
         <p>This is an automated message. Please do not reply to this email.</p>
       </div>
     </div>

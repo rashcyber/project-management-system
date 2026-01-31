@@ -215,7 +215,7 @@ const Register = () => {
           {inviteInfo ? (
             <p>Join <strong>{inviteInfo.workspaceName}</strong> workspace as {inviteInfo.role}</p>
           ) : (
-            <p>Sign up to get started with TaskFlow</p>
+            <p>Sign up to get started with ProjectFlow</p>
           )}
         </div>
 

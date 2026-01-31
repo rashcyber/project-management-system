@@ -64,7 +64,7 @@ const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
             <div className="logo-icon">
               <CheckSquare size={24} />
             </div>
-            {isOpen && <span className="logo-text">TaskFlow</span>}
+            {isOpen && <span className="logo-text">ProjectFlow</span>}
           </div>
           {!isMobile && (
             <button className="sidebar-toggle" onClick={onToggle}>
