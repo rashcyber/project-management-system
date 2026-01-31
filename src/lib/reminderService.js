@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { sendTaskReminderEmail } from './sendgridService';
+import { sendTaskReminderEmail } from './resendService';
 
 /**
  * Reminder Service
