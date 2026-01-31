@@ -278,6 +278,7 @@ const Projects = () => {
                     className="progress-bar-fill"
                     style={{
                       width: `${project.task_completion_percentage ? Math.round(project.task_completion_percentage) : 0}%`,
+                      color: project.color || '#3b82f6',
                     }}
                   />
                 </div>
