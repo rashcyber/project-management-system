@@ -37,8 +37,7 @@ export const checkAndCreateReminders = async () => {
         ),
         reminders
       `)
-      .not('due_date', 'is', null)
-      .not('reminders', 'is', null);
+      .not('due_date', 'is', null);
 
     if (tasksError) {
       console.error('Error fetching tasks for reminders:', tasksError);
