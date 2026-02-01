@@ -304,7 +304,7 @@
 .progress-label {
   font-size: 0.6rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--primary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: inline-block;
