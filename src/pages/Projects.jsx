@@ -267,7 +267,7 @@ const Projects = () => {
               </p>
 
               {/* Task Progress Bar */}
-              <div className="project-progress-section">
+              <div className="project-progress-section" style={{ '--progress-color': project.color || '#3b82f6' }}>
                 <div className="progress-header">
                   <span className="progress-label">Progress</span>
                   <span className="progress-percent">

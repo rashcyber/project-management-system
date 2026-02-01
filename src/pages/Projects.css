@@ -304,12 +304,14 @@
 .progress-label {
   font-size: 0.6rem;
   font-weight: 700;
-  color: #f97316;
+  color: #fff;
+  background-color: var(--progress-color, #3b82f6);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: inline-block;
   position: relative;
-  padding-bottom: 3px;
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
 .progress-label::after {
@@ -319,7 +321,7 @@
   left: 0;
   right: 0;
   height: 1.5px;
-  background-color: var(--project-color, var(--primary));
+  background-color: var(--progress-color, #3b82f6);
   border-radius: 1px;
 }
 
