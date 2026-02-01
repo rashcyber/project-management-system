@@ -267,9 +267,9 @@ const Projects = () => {
               </p>
 
               {/* Task Progress Bar */}
-              <div className="project-progress-section" style={{ '--progress-color': project.color || '#3b82f6' }}>
+              <div className="project-progress-section">
                 <div className="progress-header">
-                  <span className="progress-label">Progress</span>
+                  <span className="progress-label" style={{ backgroundColor: project.color || '#3b82f6' }}>Progress</span>
                   <span className="progress-percent">
                     {project.task_completion_percentage ? Math.round(project.task_completion_percentage) : 0}%
                   </span>
@@ -279,7 +279,7 @@ const Projects = () => {
                     className="progress-bar-fill"
                     style={{
                       width: `${project.task_completion_percentage ? Math.round(project.task_completion_percentage) : 0}%`,
-                      backgroundColor: project.color || '#ff0000',
+                      backgroundColor: project.color || '#3b82f6',
                     }}
                   />
                 </div>

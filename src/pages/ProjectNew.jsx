@@ -17,6 +17,16 @@ const PROJECT_COLORS = [
   '#14b8a6', // Teal
   '#06b6d4', // Cyan
   '#6366f1', // Indigo
+  '#a855f7', // Violet
+  '#d946ef', // Fuchsia
+  '#0891b2', // Cyan-dark
+  '#059669', // Emerald
+  '#7c3aed', // Violet-dark
+  '#db2777', // Rose
+  '#ea580c', // Orange-dark
+  '#4f46e5', // Indigo-dark
+  '#1e40af', // Blue-dark
+  '#991b1b', // Red-dark
 ];
 
 const ProjectNew = () => {

@@ -302,15 +302,15 @@
 }
 
 .progress-label {
-  font-size: 0.55rem;
+  font-size: 0.5rem !important;
   font-weight: 700;
   color: #fff;
   background-color: var(--progress-color, #3b82f6);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
   display: inline-block;
   position: relative;
-  padding: 2px 5px;
+  padding: 1px 4px;
   border-radius: 3px;
 }
 
