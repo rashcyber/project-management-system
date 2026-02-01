@@ -45,7 +45,14 @@ const useProjectStore = create((set, get) => ({
       let query = supabase
         .from('projects')
         .select(`
-          *,
+          id,
+          name,
+          description,
+          color,
+          owner_id,
+          workspace_id,
+          created_at,
+          updated_at,
           owner:profiles!projects_owner_id_fkey(id, full_name, email, avatar_url),
           project_members(
             user_id,
@@ -137,7 +144,14 @@ const useProjectStore = create((set, get) => ({
       let query = supabase
         .from('projects')
         .select(`
-          *,
+          id,
+          name,
+          description,
+          color,
+          owner_id,
+          workspace_id,
+          created_at,
+          updated_at,
           owner:profiles!projects_owner_id_fkey(id, full_name, email, avatar_url),
           project_members(
             user_id,
