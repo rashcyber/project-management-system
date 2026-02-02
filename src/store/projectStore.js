@@ -340,10 +340,12 @@ const useProjectStore = create((set, get) => ({
           owner_id: user.id,
           workspace_id: profile?.workspace_id,
         })
-        .select()
+        .select('*')
         .single();
 
       if (error) throw error;
+
+      console.log('📦 Project created with data:', { id: data.id, color: data.color, name: data.name });
 
       // Add owner as project admin
       console.log('📦 Adding project owner as member:', { project_id: data.id, user_id: user.id });
