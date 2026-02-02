@@ -277,6 +277,7 @@ const Projects = () => {
                 <div className="progress-bar-container">
                   <div
                     className="progress-bar-fill"
+                    data-color={project.color}
                     style={{
                       width: `${project.task_completion_percentage ? Math.round(project.task_completion_percentage) : 0}%`,
                       backgroundColor: project.color || '#3b82f6',
