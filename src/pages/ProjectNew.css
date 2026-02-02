@@ -138,12 +138,12 @@
 }
 
 .color-option {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: var(--radius-md);
+  width: 48px;
+  height: 48px;
+  border: 2px solid transparent;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   position: relative;
 }
 
