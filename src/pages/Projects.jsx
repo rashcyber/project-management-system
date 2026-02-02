@@ -206,7 +206,9 @@ const Projects = () => {
         </div>
       ) : (
         <div className="projects-grid">
-          {filteredProjects.map((project) => (
+          {filteredProjects.map((project) => {
+            console.log('🎨 Rendering project:', { name: project.name, color: project.color });
+            return (
             <div
               key={project.id}
               className="project-card"
@@ -342,7 +344,8 @@ const Projects = () => {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
 
           {/* Load More Button */}
           {projectsHasMore && (
