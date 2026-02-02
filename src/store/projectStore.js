@@ -340,16 +340,7 @@ const useProjectStore = create((set, get) => ({
           owner_id: user.id,
           workspace_id: profile?.workspace_id,
         })
-        .select(`
-          id,
-          name,
-          description,
-          color,
-          owner_id,
-          workspace_id,
-          created_at,
-          updated_at
-        `)
+        .select()
         .single();
 
       if (error) throw error;
