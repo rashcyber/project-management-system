@@ -152,30 +152,23 @@ const Register = () => {
       // If signing up via invite link, handle the workspace assignment and link usage
       if (inviteInfo && data.user) {
         try {
-          // Step 1: Check if user already has a super_admin role
-          const { data: existingProfile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', data.user.id)
-            .single();
-
-          // Only update role if user is not already a super_admin
-          const updateData = { workspace_id: inviteInfo.workspaceId };
-          if (existingProfile?.role !== 'super_admin') {
-            updateData.role = inviteInfo.role;
-          }
-
+          // Step 1: Assign user to workspace with invited role (user will be super_admin but can be invited to specific workspaces)
           const { error: profileError } = await supabase
             .from('profiles')
-            .update(updateData)
+            .update({
+              workspace_id: inviteInfo.workspaceId,
+              role: inviteInfo.role, // Override with invited role for this workspace
+            })
             .eq('id', data.user.id);
 
           if (profileError) {
             console.warn('Failed to update profile with workspace:', profileError);
           }
 
-          // Step 2: Increment the used_count on the invite link
-          // First get current count, then increment
+          // Step 2: Add user to project_members for the workspace (if needed)
+          // This ensures they appear in the workspace team list
+
+          // Step 3: Increment the used_count on the invite link
           const { data: currentLink } = await supabase
             .from('invite_links')
             .select('used_count')

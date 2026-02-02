@@ -64,6 +64,19 @@ const useAuthStore = create(
           await new Promise(resolve => setTimeout(resolve, 1000));
 
           if (data.user) {
+            // Ensure new user is created as super_admin with no workspace
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                role: 'super_admin',
+                workspace_id: null,
+              })
+              .eq('id', data.user.id);
+
+            if (updateError) {
+              console.error('Error updating profile role:', updateError);
+            }
+
             const { data: profile } = await supabase
               .from('profiles')
               .select('*')
