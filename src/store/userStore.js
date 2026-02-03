@@ -31,8 +31,8 @@ const useUserStore = create((set, get) => ({
         .select('*')
         .order('created_at', { ascending: false });
 
-      // If not super_admin, filter by workspace
-      if (currentProfile?.role !== 'super_admin' && currentProfile?.workspace_id) {
+      // ALL users (including super_admin) must be filtered by their workspace for isolation
+      if (currentProfile?.workspace_id) {
         query = query.eq('workspace_id', currentProfile.workspace_id);
       }
 
