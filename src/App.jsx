@@ -23,6 +23,7 @@ import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 import UserManagement from './pages/UserManagement';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminPanel from './pages/AdminPanel';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 
@@ -66,6 +67,7 @@ function App() {
           <Route path="activity" element={<Activity />} />
           <Route path="admin/dashboard" element={<AdminDashboard />} />
           <Route path="admin/users" element={<UserManagement />} />
+          <Route path="admin/panel" element={<AdminPanel />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="settings" element={<Settings />} />
         </Route>

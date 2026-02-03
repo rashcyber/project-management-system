@@ -8,10 +8,13 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_system_admin BOOLEAN DEFAULT FA
 CREATE INDEX IF NOT EXISTS idx_profiles_is_system_admin ON profiles(is_system_admin) WHERE is_system_admin = TRUE;
 
 -- STEP 3: Update RLS policies to allow system admins to see all workspaces
--- First, update the workspace policies to include system admin access
+-- Drop existing policies if they exist (Supabase doesn't support CREATE POLICY IF NOT EXISTS)
+DROP POLICY IF EXISTS "System admins can view all workspaces" ON workspaces;
+DROP POLICY IF EXISTS "System admins can delete any workspace" ON workspaces;
+DROP POLICY IF EXISTS "System admins can view all profiles" ON profiles;
 
 -- Policy: System admins can view all workspaces
-CREATE POLICY IF NOT EXISTS "System admins can view all workspaces"
+CREATE POLICY "System admins can view all workspaces"
   ON workspaces FOR SELECT
   USING (
     EXISTS (
@@ -21,7 +24,7 @@ CREATE POLICY IF NOT EXISTS "System admins can view all workspaces"
   );
 
 -- Policy: System admins can delete any workspace
-CREATE POLICY IF NOT EXISTS "System admins can delete any workspace"
+CREATE POLICY "System admins can delete any workspace"
   ON workspaces FOR DELETE
   USING (
     EXISTS (
@@ -31,7 +34,7 @@ CREATE POLICY IF NOT EXISTS "System admins can delete any workspace"
   );
 
 -- Policy: System admins can view all profiles (for platform management)
-CREATE POLICY IF NOT EXISTS "System admins can view all profiles"
+CREATE POLICY "System admins can view all profiles"
   ON profiles FOR SELECT
   USING (
     EXISTS (
@@ -65,8 +68,11 @@ CREATE TABLE IF NOT EXISTS workspace_audit_log (
 -- Enable RLS on audit table
 ALTER TABLE workspace_audit_log ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing audit log policy if it exists
+DROP POLICY IF EXISTS "System admins can view workspace audit log" ON workspace_audit_log;
+
 -- Policy: System admins can view audit log
-CREATE POLICY IF NOT EXISTS "System admins can view workspace audit log"
+CREATE POLICY "System admins can view workspace audit log"
   ON workspace_audit_log FOR SELECT
   USING (
     EXISTS (

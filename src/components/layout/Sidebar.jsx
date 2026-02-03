@@ -34,6 +34,7 @@ const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
   ];
 
   const adminNavItems = [
+    { path: '/admin/panel', icon: Users, label: 'Workspace Admin' },
     { path: '/admin/users', icon: Users, label: 'User Management' },
   ];
 
