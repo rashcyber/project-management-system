@@ -213,10 +213,6 @@ const Projects = () => {
               key={project.id}
               className="project-card"
               style={{
-                borderLeftColor: project.color || '#3b82f6',
-                borderLeftWidth: '4px',
-                borderTopColor: project.color || '#3b82f6',
-                borderTopWidth: '3px',
                 '--project-color': project.color || '#3b82f6'
               }}
             >
