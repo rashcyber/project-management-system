@@ -37,6 +37,21 @@ const Dashboard = () => {
   const { notifications, fetchNotifications } = useNotificationStore();
   const navigate = useNavigate();
 
+  // If user is system admin, redirect to admin dashboard
+  useEffect(() => {
+    if (profile?.is_system_admin === true) {
+      navigate('/admin/dashboard');
+      return;
+    }
+  }, [profile?.is_system_admin, navigate]);
+
+  // If user is super_admin with no workspace, redirect to workspace creation
+  useEffect(() => {
+    if (profile?.role === 'super_admin' && !profile?.workspace_id) {
+      navigate('/workspace/new');
+    }
+  }, [profile?.role, profile?.workspace_id, navigate]);
+
   const [stats, setStats] = useState({
     totalProjects: 0,
     totalTasks: 0,
