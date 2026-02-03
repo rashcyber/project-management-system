@@ -66,7 +66,7 @@ const InviteLinksManager = () => {
 
   const handleCopyLink = (code) => {
     const appUrl = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
-    const inviteUrl = `${appUrl}/signup?invite=${code}`;
+    const inviteUrl = `${appUrl}/register?invite=${code}`;
 
     navigator.clipboard.writeText(inviteUrl);
     setCopiedId(code);
@@ -260,7 +260,7 @@ const InviteLinksManager = () => {
                   <input
                     type="text"
                     readOnly
-                    value={`${import.meta.env.VITE_APP_URL || 'http://localhost:5173'}/signup?invite=${link.code}`}
+                    value={`${import.meta.env.VITE_APP_URL || 'http://localhost:5173'}/register?invite=${link.code}`}
                     className="full-link-input"
                   />
                 </div>

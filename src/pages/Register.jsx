@@ -165,10 +165,7 @@ const Register = () => {
             console.warn('Failed to update profile with workspace:', profileError);
           }
 
-          // Step 2: Add user to project_members for the workspace (if needed)
-          // This ensures they appear in the workspace team list
-
-          // Step 3: Increment the used_count on the invite link
+          // Step 2: Increment the used_count on the invite link
           const { data: currentLink } = await supabase
             .from('invite_links')
             .select('used_count')
