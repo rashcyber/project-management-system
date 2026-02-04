@@ -214,6 +214,47 @@ const useAuthStore = create(
         const { profile } = get();
         return ['super_admin', 'admin', 'manager'].includes(profile?.role);
       },
+
+      // Create a new workspace
+      createWorkspace: async (workspaceData) => {
+        const { user } = get();
+        if (!user) return { data: null, error: { message: 'Not authenticated' } };
+
+        try {
+          const { data, error } = await supabase
+            .from('workspaces')
+            .insert({
+              name: workspaceData.name,
+              description: workspaceData.description || null,
+              owner_id: user.id,
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          // Update user profile with new workspace_id
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ workspace_id: data.id })
+            .eq('id', user.id);
+
+          if (updateError) throw updateError;
+
+          // Update local state
+          const { data: updatedProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          set({ profile: updatedProfile });
+
+          return { data, error: null };
+        } catch (error) {
+          return { data: null, error };
+        }
+      },
     }),
     {
       name: 'auth-storage',

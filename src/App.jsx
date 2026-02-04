@@ -13,6 +13,7 @@ import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import ProjectNew from './pages/ProjectNew';
+import WorkspaceNew from './pages/WorkspaceNew';
 import ProjectBoard from './pages/ProjectBoard';
 import ProjectSettings from './pages/ProjectSettings';
 import TeamManagement from './pages/TeamManagement';
@@ -54,6 +55,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="workspace/new" element={<WorkspaceNew />} />
           <Route path="projects" element={<Projects />} />
           <Route path="projects/new" element={<ProjectNew />} />
           <Route path="projects/:projectId/board" element={<ProjectBoard />} />
