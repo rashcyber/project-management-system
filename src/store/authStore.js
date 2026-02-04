@@ -221,13 +221,19 @@ const useAuthStore = create(
         if (!user) return { data: null, error: { message: 'Not authenticated' } };
 
         try {
+          const workspacePayload = {
+            name: workspaceData.name,
+            owner_id: user.id,
+          };
+
+          // Include description if the column exists
+          if (workspaceData.description) {
+            workspacePayload.description = workspaceData.description;
+          }
+
           const { data, error } = await supabase
             .from('workspaces')
-            .insert({
-              name: workspaceData.name,
-              description: workspaceData.description || null,
-              owner_id: user.id,
-            })
+            .insert(workspacePayload)
             .select()
             .single();
 
