@@ -12,6 +12,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 2rem;
   padding: 2rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px;
@@ -31,6 +32,17 @@
   font-size: 1rem;
 }
 
+.admin-panel-header strong {
+  opacity: 1;
+  font-weight: 700;
+}
+
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .admin-role-badge {
   display: flex;
   align-items: center;
@@ -40,6 +52,7 @@
   border-radius: 8px;
   font-weight: 600;
   backdrop-filter: blur(10px);
+  white-space: nowrap;
 }
 
 /* Stats Grid */

@@ -8,6 +8,7 @@ import {
   Settings,
   Shield,
   AlertTriangle,
+  UserPlus,
 } from 'lucide-react';
 import { Button, Loading, Avatar } from '../components/common';
 import useAuthStore from '../store/authStore';
@@ -31,6 +32,7 @@ const AdminPanel = () => {
     adminsInWorkspace: 0,
   });
   const [members, setMembers] = useState([]);
+  const [workspaceOwner, setWorkspaceOwner] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
@@ -61,6 +63,10 @@ const AdminPanel = () => {
         .eq('workspace_id', profile.workspace_id);
 
       setMembers(workspaceMembers || []);
+
+      // Find workspace owner (super_admin)
+      const owner = (workspaceMembers || []).find((m) => m.role === 'super_admin');
+      setWorkspaceOwner(owner);
 
       // Calculate stats
       const { count: projectCount } = await supabase
@@ -156,11 +162,23 @@ const AdminPanel = () => {
       <div className="admin-panel-header">
         <div>
           <h1>Workspace Administration</h1>
-          <p>Manage your workspace settings and team members</p>
+          <p>
+            Workspace Owner: <strong>{workspaceOwner?.full_name || 'Loading...'}</strong>
+          </p>
         </div>
-        <div className="admin-role-badge">
-          <Shield size={20} />
-          <span>{profile?.role === 'super_admin' ? 'Workspace Owner' : 'Workspace Admin'}</span>
+        <div className="admin-header-actions">
+          <Button
+            variant="primary"
+            size="medium"
+            icon={<UserPlus size={18} />}
+            onClick={() => navigate('/user-management')}
+          >
+            Invite User
+          </Button>
+          <div className="admin-role-badge">
+            <Shield size={20} />
+            <span>{profile?.role === 'super_admin' ? 'Workspace Owner' : 'Workspace Admin'}</span>
+          </div>
         </div>
       </div>
 
