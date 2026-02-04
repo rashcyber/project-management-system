@@ -117,7 +117,7 @@ const Layout = () => {
         unsubscribeEmail?.();
       };
     }
-  }, [user, fetchNotifications, subscribeToNotifications]);
+  }, [user?.id]);
 
   const handleSidebarToggle = () => {
     setSidebarOpen(!sidebarOpen);
