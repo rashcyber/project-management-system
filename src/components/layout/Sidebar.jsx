@@ -124,7 +124,7 @@ const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
             </div>
           )}
 
-          {isAdmin() && (
+          {isAdmin() && !isSystemAdmin() && (
             <div className="nav-section">
               {isOpen && <span className="nav-section-title">Admin</span>}
               <ul className="nav-list">

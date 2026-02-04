@@ -23,6 +23,7 @@ import useUserStore from '../store/userStore';
 import { toast } from '../store/toastStore';
 import { format } from 'date-fns';
 import useDebounce from '../hooks/useDebounce';
+import useSystemAdminGuard from '../hooks/useSystemAdminGuard';
 import './Projects.css';
 
 const Projects = () => {
@@ -40,6 +41,9 @@ const Projects = () => {
   const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [memberSearch, setMemberSearch] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // Redirect System Admin to their dashboard
+  useSystemAdminGuard();
 
   // Debounce search input for performance
   const debouncedSearch = useDebounce(searchQuery, 300);

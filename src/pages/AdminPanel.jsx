@@ -36,6 +36,7 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // Verify user is admin
   useEffect(() => {
@@ -171,7 +172,7 @@ const AdminPanel = () => {
             variant="primary"
             size="medium"
             icon={<UserPlus size={18} />}
-            onClick={() => navigate('/user-management')}
+            onClick={() => setShowInviteModal(true)}
           >
             Invite User
           </Button>
@@ -303,6 +304,59 @@ const AdminPanel = () => {
           </p>
         </div>
       </div>
+
+      {/* Invite User Modal - Opens within AdminPanel */}
+      {showInviteModal && (
+        <div className="invite-modal-overlay" onClick={() => setShowInviteModal(false)}>
+          <div className="invite-modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Invite User to Workspace</h3>
+            <p className="modal-description">
+              Enter the email of the person you want to invite to this workspace
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const email = e.target.email.value;
+                const role = e.target.role.value;
+                // TODO: Implement actual invite functionality
+                toast.success(`Invitation sent to ${email} as ${role}`);
+                setShowInviteModal(false);
+              }}
+            >
+              <div className="form-group">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="user@example.com"
+                  required
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Role</label>
+                <select name="role" className="form-input" required>
+                  <option value="member">Member</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div className="modal-actions">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowInviteModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary">
+                  Send Invite
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
