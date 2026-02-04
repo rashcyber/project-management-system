@@ -21,7 +21,6 @@ import useAuthStore from '../store/authStore';
 import useSystemAdminStore from '../store/systemAdminStore';
 import { supabase } from '../lib/supabase';
 import { toast } from '../store/toastStore';
-import { supabase } from '../lib/supabase';
 import { format, formatDistanceToNow } from 'date-fns';
 import './AdminDashboard.css';
 

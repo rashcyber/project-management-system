@@ -16,7 +16,6 @@ import {
   Activity,
   ShieldCheck,
   Building2,
-  LogBook,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { Avatar } from '../common';
