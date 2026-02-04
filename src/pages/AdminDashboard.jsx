@@ -65,26 +65,42 @@ const AdminDashboard = () => {
   // Load data
   useEffect(() => {
     if (profile?.is_system_admin) {
-      loadWorkspaces();
-      loadAuditLog();
-      loadStats();
-      loadSystemAdmins();
+      const loadAllData = async () => {
+        setLoading(true);
+        try {
+          await Promise.all([
+            loadWorkspaces(),
+            loadAuditLog(),
+            loadStats(),
+            loadSystemAdmins(),
+          ]);
+        } catch (error) {
+          console.error('Error loading admin dashboard data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadAllData();
     }
-  }, [profile]);
+  }, [profile?.is_system_admin]);
 
   const loadSystemAdmins = async () => {
     try {
       const { data, error } = await fetchSystemAdmins();
-      if (error) throw error;
-      setSystemAdmins(data || []);
+      if (error) {
+        console.error('Failed to load system admins:', error);
+        setSystemAdmins([]);
+      } else {
+        setSystemAdmins(data || []);
+      }
     } catch (error) {
       console.error('Failed to load system admins:', error);
+      setSystemAdmins([]);
     }
   };
 
   const loadWorkspaces = async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('workspaces')
         .select(`
@@ -104,9 +120,7 @@ const AdminDashboard = () => {
       setWorkspaces(data || []);
     } catch (error) {
       toast.error('Failed to load workspaces');
-      console.error(error);
-    } finally {
-      setLoading(false);
+      console.error('Load workspaces error:', error);
     }
   };
 
