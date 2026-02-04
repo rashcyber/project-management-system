@@ -57,10 +57,11 @@ BEGIN
   RAISE NOTICE 'Total users now in target workspace: %', moved_count;
 END $$;
 
--- Show final result
-RAISE NOTICE '--- Final State ---';
+COMMIT;
 
+-- Show final result
 SELECT
+  'Final Workspace State' as status,
   w.name as workspace_name,
   (SELECT COUNT(*) FROM profiles WHERE workspace_id = w.id) as member_count,
   p.full_name as owner
@@ -68,8 +69,7 @@ FROM workspaces w
 LEFT JOIN profiles p ON w.owner_id = p.id
 ORDER BY w.created_at DESC;
 
-RAISE NOTICE '--- All Users ---';
-
+-- Show all users
 SELECT
   p.email,
   p.full_name,
@@ -78,5 +78,3 @@ SELECT
 FROM profiles p
 LEFT JOIN workspaces w ON p.workspace_id = w.id
 ORDER BY p.created_at ASC;
-
-COMMIT;
