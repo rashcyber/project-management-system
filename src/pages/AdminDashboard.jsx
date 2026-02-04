@@ -19,6 +19,7 @@ import {
 import { Button, Modal, Loading, Input, DeleteConfirmModal } from '../components/common';
 import useAuthStore from '../store/authStore';
 import useSystemAdminStore from '../store/systemAdminStore';
+import { supabase } from '../lib/supabase';
 import { toast } from '../store/toastStore';
 import { supabase } from '../lib/supabase';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -101,26 +102,47 @@ const AdminDashboard = () => {
 
   const loadWorkspaces = async () => {
     try {
+      // Use simpler query to avoid RLS issues
       const { data, error } = await supabase
         .from('workspaces')
-        .select(`
-          id,
-          name,
-          owner_id,
-          created_at,
-          updated_at,
-          owner:profiles!workspaces_owner_id_fkey(id, full_name, email, avatar_url),
-          profiles(id),
-          projects(id)
-        `)
+        .select('id, name, owner_id, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setWorkspaces(data || []);
+      // Fetch owner and member counts separately
+      const enrichedData = await Promise.all(
+        (data || []).map(async (workspace) => {
+          const { data: ownerData } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, avatar_url')
+            .eq('id', workspace.owner_id)
+            .single();
+
+          const { data: members } = await supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .eq('workspace_id', workspace.id);
+
+          const { data: projects } = await supabase
+            .from('projects')
+            .select('id', { count: 'exact', head: true })
+            .eq('workspace_id', workspace.id);
+
+          return {
+            ...workspace,
+            owner: ownerData,
+            profiles: members || [],
+            projects: projects || [],
+          };
+        })
+      );
+
+      setWorkspaces(enrichedData || []);
     } catch (error) {
       toast.error('Failed to load workspaces');
       console.error('Load workspaces error:', error);
+      setWorkspaces([]);
     }
   };
 

@@ -57,17 +57,26 @@ const AdminPanel = () => {
     try {
       setLoading(true);
 
-      // Fetch all members in workspace
+      // Fetch workspace to get owner info
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('owner:profiles!workspaces_owner_id_fkey(id, full_name, email, avatar_url)')
+        .eq('id', profile.workspace_id)
+        .single();
+
+      if (workspace?.owner) {
+        setWorkspaceOwner(workspace.owner);
+      }
+
+      // Fetch all members in workspace (exclude system admins)
       const { data: workspaceMembers } = await supabase
         .from('profiles')
-        .select('id, full_name, email, role, avatar_url, created_at')
+        .select('id, full_name, email, role, avatar_url, created_at, is_system_admin')
         .eq('workspace_id', profile.workspace_id);
 
-      setMembers(workspaceMembers || []);
-
-      // Find workspace owner (super_admin)
-      const owner = (workspaceMembers || []).find((m) => m.role === 'super_admin');
-      setWorkspaceOwner(owner);
+      // Filter out system admins from the members list (they're platform-level, not workspace members)
+      const workspaceOnlyMembers = (workspaceMembers || []).filter(m => !m.is_system_admin);
+      setMembers(workspaceOnlyMembers);
 
       // Calculate stats
       const { count: projectCount } = await supabase

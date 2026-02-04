@@ -15,6 +15,8 @@ import {
   LogOut,
   Activity,
   ShieldCheck,
+  Building2,
+  LogBook,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { Avatar } from '../common';
@@ -40,7 +42,8 @@ const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
   ];
 
   const systemAdminNavItems = [
-    { path: '/admin/dashboard', icon: ShieldCheck, label: 'System Admin' },
+    { path: '/admin/dashboard', icon: ShieldCheck, label: 'Dashboard' },
+    { path: '/admin/workspaces', icon: Building2, label: 'Workspaces' },
   ];
 
   const bottomNavItems = [
@@ -80,26 +83,29 @@ const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-section">
-            {isOpen && <span className="nav-section-title">Main Menu</span>}
-            <ul className="nav-list">
-              {mainNavItems.map((item) => (
-                <li key={item.path}>
-                  <NavLink
-                    to={item.path}
-                    className={({ isActive }) =>
-                      `nav-link ${isActive ? 'active' : ''}`
-                    }
-                    onClick={handleNavClick}
-                    title={!isOpen ? item.label : undefined}
-                  >
-                    <item.icon size={20} />
-                    {isOpen && <span>{item.label}</span>}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Only show main menu to non-system-admin users */}
+          {!isSystemAdmin() && (
+            <div className="nav-section">
+              {isOpen && <span className="nav-section-title">Main Menu</span>}
+              <ul className="nav-list">
+                {mainNavItems.map((item) => (
+                  <li key={item.path}>
+                    <NavLink
+                      to={item.path}
+                      className={({ isActive }) =>
+                        `nav-link ${isActive ? 'active' : ''}`
+                      }
+                      onClick={handleNavClick}
+                      title={!isOpen ? item.label : undefined}
+                    >
+                      <item.icon size={20} />
+                      {isOpen && <span>{item.label}</span>}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {isSystemAdmin() && (
             <div className="nav-section">
