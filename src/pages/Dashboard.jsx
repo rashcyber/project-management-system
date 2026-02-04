@@ -45,12 +45,18 @@ const Dashboard = () => {
     }
   }, [profile?.is_system_admin, navigate]);
 
-  // If user is super_admin with no workspace, redirect to workspace creation
+  // If user is super_admin (workspace owner) with no workspace, redirect to workspace creation
+  // BUT: System admins have is_system_admin=true and role=super_admin, they should NOT be redirected
+  // Only workspace super_admins without a workspace are redirected
   useEffect(() => {
-    if (profile?.role === 'super_admin' && !profile?.workspace_id) {
+    if (
+      profile?.role === 'super_admin' &&
+      !profile?.workspace_id &&
+      profile?.is_system_admin !== true  // Don't redirect system admins
+    ) {
       navigate('/workspace/new');
     }
-  }, [profile?.role, profile?.workspace_id, navigate]);
+  }, [profile?.role, profile?.workspace_id, profile?.is_system_admin, navigate]);
 
   const [stats, setStats] = useState({
     totalProjects: 0,

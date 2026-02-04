@@ -64,29 +64,36 @@ const useAuthStore = create(
           await new Promise(resolve => setTimeout(resolve, 1000));
 
           if (data.user) {
-            // Ensure new user is created as super_admin with no workspace
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({
-                role: 'super_admin',
-                workspace_id: null,
-              })
-              .eq('id', data.user.id);
+            // Wait for database trigger to create profile with proper role
+            // First user becomes super_admin with workspace, others become member
+            let profile = null;
+            let attempts = 0;
+            const maxAttempts = 5;
 
-            if (updateError) {
-              console.error('Error updating profile role:', updateError);
+            while (!profile && attempts < maxAttempts) {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', data.user.id)
+                .single();
+
+              if (profileData) {
+                profile = profileData;
+              } else {
+                attempts++;
+                await new Promise(resolve => setTimeout(resolve, 200));
+              }
             }
-
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', data.user.id)
-              .single();
 
             set({
               user: data.user,
               session: data.session,
-              profile,
+              profile: profile || {
+                id: data.user.id,
+                email: email,
+                full_name: fullName,
+                role: 'member',
+              },
               loading: false,
             });
 
