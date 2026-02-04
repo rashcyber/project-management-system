@@ -200,6 +200,93 @@ const useSystemAdminStore = create((set, get) => ({
       return { data: null, error };
     }
   },
+
+  // Fetch all system admins
+  fetchSystemAdmins: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, avatar_url, is_system_admin, created_at')
+        .eq('is_system_admin', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  // Search users by email or name (for promoting to system admin)
+  searchUsers: async (query) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, avatar_url, is_system_admin, role, created_at')
+        .or(`email.ilike.%${query}%,full_name.ilike.%${query}%`)
+        .eq('is_system_admin', false)
+        .limit(20);
+
+      if (error) throw error;
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  // Log system admin promotion to audit trail
+  logSystemAdminPromotion: async (userId, userName, userEmail) => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+      const { error } = await supabase
+        .from('workspace_audit_log')
+        .insert({
+          admin_id: currentUser?.id,
+          action: 'SYSTEM_ADMIN_PROMOTED',
+          workspace_name: 'PLATFORM',
+          details: {
+            promoted_user_id: userId,
+            promoted_user_email: userEmail,
+            promoted_user_name: userName,
+            action_type: 'system_admin_promotion',
+          },
+        });
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  // Log system admin demotion to audit trail
+  logSystemAdminDemotion: async (userId, userName, userEmail) => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+      const { error } = await supabase
+        .from('workspace_audit_log')
+        .insert({
+          admin_id: currentUser?.id,
+          action: 'SYSTEM_ADMIN_DEMOTED',
+          workspace_name: 'PLATFORM',
+          details: {
+            demoted_user_id: userId,
+            demoted_user_email: userEmail,
+            demoted_user_name: userName,
+            action_type: 'system_admin_demotion',
+          },
+        });
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  },
 }));
 
 export default useSystemAdminStore;

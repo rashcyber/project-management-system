@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Button, Modal, Loading, Input, DeleteConfirmModal } from '../components/common';
 import useAuthStore from '../store/authStore';
+import useSystemAdminStore from '../store/systemAdminStore';
 import { toast } from '../store/toastStore';
 import { supabase } from '../lib/supabase';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -26,6 +27,7 @@ import './AdminDashboard.css';
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { profile, signOut } = useAuthStore();
+  const { promoteUserToSystemAdmin, demoteSystemAdmin, logSystemAdminPromotion, logSystemAdminDemotion, fetchSystemAdmins, searchUsers } = useSystemAdminStore();
 
   // State
   const [workspaces, setWorkspaces] = useState([]);
@@ -42,6 +44,16 @@ const AdminDashboard = () => {
   });
   const [activeMenu, setActiveMenu] = useState(null);
 
+  // System admin management state
+  const [systemAdmins, setSystemAdmins] = useState([]);
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [showDemoteModal, setShowDemoteModal] = useState(false);
+  const [userToDemote, setUserToDemote] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchQueryUsers, setSearchQueryUsers] = useState('');
+  const [promoteLoading, setPromoteLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+
   // Check if user is system admin
   useEffect(() => {
     if (!profile?.is_system_admin) {
@@ -56,8 +68,19 @@ const AdminDashboard = () => {
       loadWorkspaces();
       loadAuditLog();
       loadStats();
+      loadSystemAdmins();
     }
   }, [profile]);
+
+  const loadSystemAdmins = async () => {
+    try {
+      const { data, error } = await fetchSystemAdmins();
+      if (error) throw error;
+      setSystemAdmins(data || []);
+    } catch (error) {
+      console.error('Failed to load system admins:', error);
+    }
+  };
 
   const loadWorkspaces = async () => {
     try {
@@ -184,6 +207,94 @@ const AdminDashboard = () => {
     }
   };
 
+  // Search users for promotion
+  const handleSearchUsers = async (query) => {
+    setSearchQueryUsers(query);
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await searchUsers(query);
+      if (error) throw error;
+      setSearchResults(data || []);
+    } catch (error) {
+      console.error('Search failed:', error);
+    }
+  };
+
+  // Promote user to system admin
+  const handlePromoteUser = async (user) => {
+    if (user.id === profile?.id) {
+      toast.warning('You are already a system admin');
+      return;
+    }
+
+    setPromoteLoading(true);
+    try {
+      const { error } = await promoteUserToSystemAdmin(user.id);
+      if (error) throw error;
+
+      // Log the action
+      await logSystemAdminPromotion(user.id, user.full_name, user.email);
+
+      toast.success(`${user.full_name} promoted to system admin`);
+      setShowPromoteModal(false);
+      setSearchQueryUsers('');
+      setSearchResults([]);
+      setSelectedUser(null);
+
+      // Reload system admins list
+      loadSystemAdmins();
+      loadAuditLog();
+    } catch (error) {
+      toast.error('Failed to promote user');
+      console.error(error);
+    } finally {
+      setPromoteLoading(false);
+    }
+  };
+
+  // Demote system admin
+  const handleDemoteConfirm = async () => {
+    if (!userToDemote) return;
+
+    if (userToDemote.id === profile?.id) {
+      toast.error('You cannot demote yourself');
+      setShowDemoteModal(false);
+      return;
+    }
+
+    if (systemAdmins.length === 1) {
+      toast.error('Cannot demote the only system admin. Promote another user first.');
+      setShowDemoteModal(false);
+      return;
+    }
+
+    setPromoteLoading(true);
+    try {
+      const { error } = await demoteSystemAdmin(userToDemote.id);
+      if (error) throw error;
+
+      // Log the action
+      await logSystemAdminDemotion(userToDemote.id, userToDemote.full_name, userToDemote.email);
+
+      toast.success(`${userToDemote.full_name} demoted from system admin`);
+      setShowDemoteModal(false);
+      setUserToDemote(null);
+
+      // Reload system admins list
+      loadSystemAdmins();
+      loadAuditLog();
+    } catch (error) {
+      toast.error('Failed to demote user');
+      console.error(error);
+    } finally {
+      setPromoteLoading(false);
+    }
+  };
+
   const filteredWorkspaces = workspaces.filter((ws) =>
     ws.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     ws.owner?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -272,6 +383,68 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <div className="admin-content">
+        {/* System Admins Section */}
+        <div className="admin-section">
+          <div className="section-header">
+            <h2>System Admins</h2>
+            <Button
+              variant="primary"
+              size="small"
+              icon={<Plus size={16} />}
+              onClick={() => setShowPromoteModal(true)}
+            >
+              Add System Admin
+            </Button>
+          </div>
+
+          {systemAdmins.length === 0 ? (
+            <div className="empty-state">
+              <Shield size={32} />
+              <p>No system admins yet</p>
+            </div>
+          ) : (
+            <div className="admins-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {systemAdmins.map((admin) => (
+                    <tr key={admin.id}>
+                      <td className="admin-name">{admin.full_name}</td>
+                      <td className="admin-email">{admin.email}</td>
+                      <td className="admin-created">
+                        {format(new Date(admin.created_at), 'MMM d, yyyy')}
+                      </td>
+                      <td className="admin-actions">
+                        {admin.id === profile?.id ? (
+                          <span className="admin-self-badge">Current</span>
+                        ) : (
+                          <Button
+                            variant="danger"
+                            size="small"
+                            onClick={() => {
+                              setUserToDemote(admin);
+                              setShowDemoteModal(true);
+                            }}
+                          >
+                            Demote
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
         {/* Workspaces Section */}
         <div className="admin-section">
           <div className="section-header">
@@ -409,6 +582,90 @@ const AdminDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Promote User to System Admin Modal */}
+      <Modal
+        isOpen={showPromoteModal}
+        onClose={() => {
+          setShowPromoteModal(false);
+          setSearchQueryUsers('');
+          setSearchResults([]);
+          setSelectedUser(null);
+        }}
+        title="Add System Admin"
+        size="medium"
+      >
+        <div className="promote-modal-content">
+          <p className="modal-description">
+            Search for a user to promote them to system admin with platform-wide access.
+          </p>
+
+          <Input
+            label="Search User"
+            placeholder="Search by name or email..."
+            value={searchQueryUsers}
+            onChange={(e) => handleSearchUsers(e.target.value)}
+            icon={<Search size={16} />}
+          />
+
+          {searchResults.length > 0 && (
+            <div className="search-results">
+              {searchResults.map((user) => (
+                <div
+                  key={user.id}
+                  className={`result-item ${selectedUser?.id === user.id ? 'selected' : ''}`}
+                  onClick={() => setSelectedUser(user)}
+                >
+                  <div className="result-info">
+                    <span className="result-name">{user.full_name}</span>
+                    <span className="result-email">{user.email}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {searchQueryUsers && searchResults.length === 0 && (
+            <div className="empty-search">
+              <p>No users found</p>
+            </div>
+          )}
+
+          <div className="modal-actions">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowPromoteModal(false);
+                setSearchQueryUsers('');
+                setSearchResults([]);
+                setSelectedUser(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!selectedUser || promoteLoading}
+              loading={promoteLoading}
+              onClick={() => selectedUser && handlePromoteUser(selectedUser)}
+            >
+              Promote to System Admin
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Demote System Admin Modal */}
+      <DeleteConfirmModal
+        isOpen={showDemoteModal}
+        onClose={() => setShowDemoteModal(false)}
+        onConfirm={handleDemoteConfirm}
+        title="Demote System Admin"
+        message={`Are you sure you want to demote ${userToDemote?.full_name} from system admin? They will lose platform-wide access.`}
+        confirmText="Demote"
+        variant="warning"
+        isLoading={promoteLoading}
+      />
 
       {/* Delete Workspace Modal */}
       <Modal

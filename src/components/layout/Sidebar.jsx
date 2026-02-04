@@ -14,13 +14,14 @@ import {
   ChevronRight,
   LogOut,
   Activity,
+  ShieldCheck,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { Avatar } from '../common';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
-  const { profile, signOut, isAdmin } = useAuthStore();
+  const { profile, signOut, isAdmin, isSystemAdmin } = useAuthStore();
   const location = useLocation();
 
   const mainNavItems = [
@@ -36,6 +37,10 @@ const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
   const adminNavItems = [
     { path: '/admin/panel', icon: Users, label: 'Workspace Admin' },
     { path: '/admin/users', icon: Users, label: 'User Management' },
+  ];
+
+  const systemAdminNavItems = [
+    { path: '/admin/dashboard', icon: ShieldCheck, label: 'System Admin' },
   ];
 
   const bottomNavItems = [
@@ -95,6 +100,29 @@ const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
               ))}
             </ul>
           </div>
+
+          {isSystemAdmin() && (
+            <div className="nav-section">
+              {isOpen && <span className="nav-section-title">Platform</span>}
+              <ul className="nav-list">
+                {systemAdminNavItems.map((item) => (
+                  <li key={item.path}>
+                    <NavLink
+                      to={item.path}
+                      className={({ isActive }) =>
+                        `nav-link ${isActive ? 'active' : ''}`
+                      }
+                      onClick={handleNavClick}
+                      title={!isOpen ? item.label : undefined}
+                    >
+                      <item.icon size={20} />
+                      {isOpen && <span>{item.label}</span>}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {isAdmin() && (
             <div className="nav-section">

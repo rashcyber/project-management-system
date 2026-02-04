@@ -203,6 +203,12 @@ const useAuthStore = create(
         return profile?.role === 'super_admin';
       },
 
+      // Check if user is system admin (platform-wide access)
+      isSystemAdmin: () => {
+        const { profile } = get();
+        return profile?.is_system_admin === true;
+      },
+
       // Check if user can manage users
       canManageUsers: () => {
         const { profile } = get();
