@@ -291,69 +291,24 @@
   text-align: right;
 }
 
-.action-menu-wrapper {
-  position: relative;
-  display: inline-block;
-}
-
-.action-menu-btn {
+.delete-workspace-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   background: transparent;
   border: none;
-  color: var(--text-muted);
-  border-radius: 8px;
+  color: var(--danger);
   cursor: pointer;
+  border-radius: 6px;
   transition: all 0.2s ease;
 }
 
-.action-menu-btn:hover {
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.action-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 0.5rem;
-  min-width: 160px;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  z-index: 100;
-  overflow: hidden;
-}
-
-.action-menu button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.625rem 1rem;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-size: 0.875rem;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.action-menu button:hover {
-  background-color: var(--bg-secondary);
-}
-
-.delete-option {
-  color: var(--danger) !important;
-}
-
-.delete-option:hover {
-  background-color: rgba(239, 68, 68, 0.1) !important;
+.delete-workspace-btn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
 }
 
 /* Audit Log */

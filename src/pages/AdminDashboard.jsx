@@ -42,7 +42,6 @@ const AdminDashboard = () => {
     totalProjects: 0,
     totalTasks: 0,
   });
-  const [activeMenu, setActiveMenu] = useState(null);
 
   // System admin management state
   const [systemAdmins, setSystemAdmins] = useState([]);
@@ -197,7 +196,6 @@ const AdminDashboard = () => {
   const handleDeleteClick = (workspace) => {
     setWorkspaceToDelete(workspace);
     setShowDeleteModal(true);
-    setActiveMenu(null);
   };
 
   const handleConfirmDelete = async () => {
@@ -340,15 +338,6 @@ const AdminDashboard = () => {
     ws.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     ws.owner?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => setActiveMenu(null);
-    if (activeMenu) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [activeMenu]);
 
   if (loading && workspaces.length === 0) {
     return <Loading />;
@@ -547,29 +536,13 @@ const AdminDashboard = () => {
                         <span className="status-badge active">Active</span>
                       </td>
                       <td className="workspace-actions">
-                        <div className="action-menu-wrapper">
-                          <button
-                            className="action-menu-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenu(activeMenu === workspace.id ? null : workspace.id);
-                            }}
-                          >
-                            <MoreVertical size={18} />
-                          </button>
-
-                          {activeMenu === workspace.id && (
-                            <div className="action-menu" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                className="delete-option"
-                                onClick={() => handleDeleteClick(workspace)}
-                              >
-                                <Trash2 size={16} />
-                                Delete Workspace
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          className="delete-workspace-btn"
+                          onClick={() => handleDeleteClick(workspace)}
+                          title="Delete workspace"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}
