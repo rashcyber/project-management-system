@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BarChart3,
   Building2,
   Users,
   Trash2,
-  MoreVertical,
   AlertTriangle,
   Search,
   Plus,
@@ -15,6 +14,10 @@ import {
   Calendar,
   Lock,
   LogOut,
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Button, Modal, Loading, Input, DeleteConfirmModal } from '../components/common';
 import useAuthStore from '../store/authStore';
@@ -52,6 +55,12 @@ const AdminDashboard = () => {
   const [searchQueryUsers, setSearchQueryUsers] = useState('');
   const [promoteLoading, setPromoteLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+
+  // Pagination and sorting state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(15);
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   // Check if user is system admin
   useEffect(() => {
@@ -334,10 +343,72 @@ const AdminDashboard = () => {
     }
   };
 
-  const filteredWorkspaces = workspaces.filter((ws) =>
-    ws.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ws.owner?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Memoized filtering, sorting, and pagination
+  const { filtered, sorted, paginated, totalPages } = useMemo(() => {
+    // Filter
+    const filtered = workspaces.filter((ws) =>
+      ws.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ws.owner?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      let aVal, bVal;
+
+      switch (sortField) {
+        case 'name':
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+          break;
+        case 'owner':
+          aVal = a.owner?.full_name?.toLowerCase() || '';
+          bVal = b.owner?.full_name?.toLowerCase() || '';
+          break;
+        case 'memberCount':
+          aVal = a.memberCount || 0;
+          bVal = b.memberCount || 0;
+          break;
+        case 'projectCount':
+          aVal = a.projectCount || 0;
+          bVal = b.projectCount || 0;
+          break;
+        case 'created_at':
+        default:
+          aVal = new Date(a.created_at).getTime();
+          bVal = new Date(b.created_at).getTime();
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    // Pagination
+    const totalPages = Math.ceil(sorted.length / itemsPerPage);
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    const paginated = sorted.slice(startIdx, startIdx + itemsPerPage);
+
+    return { filtered, sorted, paginated, totalPages };
+  }, [workspaces, searchQuery, sortField, sortDirection, currentPage, itemsPerPage]);
+
+  // Debounced search handler
+  const handleSearchChange = useCallback((query) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page on search
+  }, []);
+
+  // Sort handler
+  const handleSort = useCallback((field) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1); // Reset to first page
+  }, [sortField, sortDirection]);
 
   if (loading && workspaces.length === 0) {
     return <Loading />;
@@ -486,17 +557,17 @@ const AdminDashboard = () => {
                   type="text"
                   placeholder="Search workspaces..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="search-input"
                 />
               </div>
               <span className="workspace-count">
-                {filteredWorkspaces.length} workspace{filteredWorkspaces.length !== 1 ? 's' : ''}
+                {filtered.length} workspace{filtered.length !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
 
-          {filteredWorkspaces.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="empty-state">
               <Building2 size={48} />
               <h3>No workspaces found</h3>
@@ -507,17 +578,72 @@ const AdminDashboard = () => {
               <table>
                 <thead>
                   <tr>
-                    <th>Workspace Name</th>
-                    <th>Owner</th>
-                    <th>Members</th>
-                    <th>Projects</th>
-                    <th>Created</th>
+                    <th
+                      className="sortable-header"
+                      onClick={() => handleSort('name')}
+                      title="Click to sort"
+                    >
+                      Workspace Name
+                      {sortField === 'name' && (
+                        sortDirection === 'asc' ?
+                          <ChevronUp size={16} className="sort-icon" /> :
+                          <ChevronDown size={16} className="sort-icon" />
+                      )}
+                    </th>
+                    <th
+                      className="sortable-header"
+                      onClick={() => handleSort('owner')}
+                      title="Click to sort"
+                    >
+                      Owner
+                      {sortField === 'owner' && (
+                        sortDirection === 'asc' ?
+                          <ChevronUp size={16} className="sort-icon" /> :
+                          <ChevronDown size={16} className="sort-icon" />
+                      )}
+                    </th>
+                    <th
+                      className="sortable-header"
+                      onClick={() => handleSort('memberCount')}
+                      title="Click to sort"
+                    >
+                      Members
+                      {sortField === 'memberCount' && (
+                        sortDirection === 'asc' ?
+                          <ChevronUp size={16} className="sort-icon" /> :
+                          <ChevronDown size={16} className="sort-icon" />
+                      )}
+                    </th>
+                    <th
+                      className="sortable-header"
+                      onClick={() => handleSort('projectCount')}
+                      title="Click to sort"
+                    >
+                      Projects
+                      {sortField === 'projectCount' && (
+                        sortDirection === 'asc' ?
+                          <ChevronUp size={16} className="sort-icon" /> :
+                          <ChevronDown size={16} className="sort-icon" />
+                      )}
+                    </th>
+                    <th
+                      className="sortable-header"
+                      onClick={() => handleSort('created_at')}
+                      title="Click to sort"
+                    >
+                      Created
+                      {sortField === 'created_at' && (
+                        sortDirection === 'asc' ?
+                          <ChevronUp size={16} className="sort-icon" /> :
+                          <ChevronDown size={16} className="sort-icon" />
+                      )}
+                    </th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredWorkspaces.map((workspace) => (
+                  {paginated.map((workspace) => (
                     <tr key={workspace.id} className="workspace-row">
                       <td className="workspace-name">{workspace.name}</td>
                       <td className="workspace-owner">
@@ -548,6 +674,48 @@ const AdminDashboard = () => {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="pagination-controls">
+                  <div className="pagination-info">
+                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} workspaces
+                  </div>
+                  <div className="pagination-buttons">
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      icon={<ChevronLeft size={16} />}
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+
+                    <div className="page-numbers">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          className={`page-number ${currentPage === page ? 'active' : ''}`}
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      icon={<ChevronRight size={16} />}
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

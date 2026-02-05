@@ -564,6 +564,84 @@
   border-top: 1px solid var(--border-light);
 }
 
+/* Table Sorting */
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s ease;
+  padding: 0.75rem !important;
+}
+
+.sortable-header:hover {
+  background-color: var(--bg-secondary);
+}
+
+.sort-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+/* Pagination Controls */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1rem;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  border-radius: 0 0 12px 12px;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.page-number {
+  min-width: 36px;
+  height: 36px;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.page-number:hover:not(.active) {
+  background-color: var(--bg-secondary);
+  border-color: var(--primary);
+}
+
+.page-number.active {
+  background-color: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .admin-dashboard {
@@ -605,5 +683,42 @@
 
   .audit-time {
     width: 100%;
+  }
+
+  /* Mobile Pagination */
+  .pagination-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pagination-info {
+    text-align: center;
+  }
+
+  .pagination-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .page-numbers {
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+  }
+
+  .page-number {
+    min-width: 32px;
+    height: 32px;
+    font-size: 0.8125rem;
+  }
+
+  /* Mobile Table Sorting */
+  .sortable-header {
+    padding: 0.5rem !important;
+  }
+
+  .sort-icon {
+    width: 14px;
+    height: 14px;
   }
 }
