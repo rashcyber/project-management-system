@@ -45,6 +45,11 @@ const AdminDashboard = () => {
     totalProjects: 0,
     totalTasks: 0,
   });
+  const [workspaceHealth, setWorkspaceHealth] = useState({
+    emptyWorkspaces: 0,
+    activeWorkspaces: 0,
+    inactiveWorkspaces: 0,
+  });
 
   // System admin management state
   const [systemAdmins, setSystemAdmins] = useState([]);
@@ -434,6 +439,29 @@ const AdminDashboard = () => {
     return actions.sort();
   }, [auditLog]);
 
+  // Calculate workspace health metrics
+  const calculatedHealth = useMemo(() => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const emptyWorkspaces = workspaces.filter(ws => !ws.projectCount || ws.projectCount === 0).length;
+    const activeWorkspaces = workspaces.filter(ws => {
+      const updatedAt = new Date(ws.updated_at);
+      return updatedAt > thirtyDaysAgo;
+    }).length;
+    const inactiveWorkspaces = workspaces.filter(ws => {
+      const updatedAt = new Date(ws.updated_at);
+      return updatedAt <= thirtyDaysAgo;
+    }).length;
+
+    return { emptyWorkspaces, activeWorkspaces, inactiveWorkspaces };
+  }, [workspaces]);
+
+  // Update health state when calculated health changes
+  useEffect(() => {
+    setWorkspaceHealth(calculatedHealth);
+  }, [calculatedHealth]);
+
   if (loading && workspaces.length === 0) {
     return <Loading />;
   }
@@ -502,6 +530,45 @@ const AdminDashboard = () => {
           <div className="stat-content">
             <span className="stat-label">Total Tasks</span>
             <span className="stat-value">{stats.totalTasks}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Workspace Health Indicators */}
+      <div className="workspace-health">
+        <h3>Workspace Health</h3>
+        <div className="health-grid">
+          <div className="health-card active">
+            <div className="health-icon">
+              <TrendingUp size={20} />
+            </div>
+            <div className="health-info">
+              <span className="health-label">Active Workspaces</span>
+              <span className="health-value">{workspaceHealth.activeWorkspaces}</span>
+              <span className="health-subtext">Updated in last 30 days</span>
+            </div>
+          </div>
+
+          <div className="health-card inactive">
+            <div className="health-icon">
+              <Calendar size={20} />
+            </div>
+            <div className="health-info">
+              <span className="health-label">Inactive Workspaces</span>
+              <span className="health-value">{workspaceHealth.inactiveWorkspaces}</span>
+              <span className="health-subtext">No updates in 30 days</span>
+            </div>
+          </div>
+
+          <div className="health-card empty">
+            <div className="health-icon">
+              <AlertTriangle size={20} />
+            </div>
+            <div className="health-info">
+              <span className="health-label">Empty Workspaces</span>
+              <span className="health-value">{workspaceHealth.emptyWorkspaces}</span>
+              <span className="health-subtext">No projects created</span>
+            </div>
           </div>
         </div>
       </div>
