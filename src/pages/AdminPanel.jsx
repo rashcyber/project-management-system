@@ -170,26 +170,24 @@ const AdminPanel = () => {
     <div className="admin-panel">
       {/* Header */}
       <div className="admin-panel-header">
-        <div>
+        <div className="header-info">
           <h1>Workspace Administration</h1>
-          <p>
-            Workspace Owner: <strong>{workspaceOwner?.full_name || 'Loading...'}</strong>
-          </p>
-        </div>
-        <div className="admin-header-actions">
-          <Button
-            variant="primary"
-            size="medium"
-            icon={<UserPlus size={18} />}
-            onClick={() => setShowInviteModal(true)}
-          >
-            Invite User
-          </Button>
           <div className="admin-role-badge">
             <Shield size={20} />
-            <span>{profile?.role === 'super_admin' ? 'Workspace Owner' : 'Workspace Admin'}</span>
+            <div className="badge-content">
+              <div className="badge-label">{profile?.role === 'super_admin' ? 'Workspace Owner' : 'Workspace Admin'}</div>
+              <div className="badge-name">{workspaceOwner?.full_name || 'Loading...'}</div>
+            </div>
           </div>
         </div>
+        <Button
+          variant="primary"
+          size="medium"
+          icon={<UserPlus size={18} />}
+          onClick={() => setShowInviteModal(true)}
+        >
+          Invite User
+        </Button>
       </div>
 
       {/* Stats Grid */}

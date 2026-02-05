@@ -178,13 +178,19 @@ const AdminDashboard = () => {
       ]);
 
       setStats({
-        totalWorkspaces: workspacesRes.count || 0,
-        totalUsers: usersRes.count || 0,
-        totalProjects: projectsRes.count || 0,
-        totalTasks: tasksRes.count || 0,
+        totalWorkspaces: workspacesRes.count !== null ? workspacesRes.count : 0,
+        totalUsers: usersRes.count !== null ? usersRes.count : 0,
+        totalProjects: projectsRes.count !== null ? projectsRes.count : 0,
+        totalTasks: tasksRes.count !== null ? tasksRes.count : 0,
       });
     } catch (error) {
       console.error('Failed to load stats:', error);
+      setStats({
+        totalWorkspaces: 0,
+        totalUsers: 0,
+        totalProjects: 0,
+        totalTasks: 0,
+      });
     }
   };
 

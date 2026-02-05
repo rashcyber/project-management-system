@@ -27,21 +27,10 @@
   margin-bottom: 0.5rem;
 }
 
-.admin-panel-header p {
-  margin: 0;
-  opacity: 0.9;
-  font-size: 1rem;
-}
-
-.admin-panel-header strong {
-  opacity: 1;
-  font-weight: 700;
-}
-
-.admin-header-actions {
+.header-info {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .admin-role-badge {
@@ -53,7 +42,24 @@
   border-radius: 8px;
   font-weight: 600;
   backdrop-filter: blur(10px);
-  white-space: nowrap;
+}
+
+.badge-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.badge-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+
+.badge-name {
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 /* Stats Grid */
