@@ -117,12 +117,12 @@ const AdminDashboard = () => {
             .eq('id', workspace.owner_id)
             .single();
 
-          const { data: members } = await supabase
+          const membersRes = await supabase
             .from('profiles')
             .select('id', { count: 'exact', head: true })
             .eq('workspace_id', workspace.id);
 
-          const { data: projects } = await supabase
+          const projectsRes = await supabase
             .from('projects')
             .select('id', { count: 'exact', head: true })
             .eq('workspace_id', workspace.id);
@@ -130,8 +130,8 @@ const AdminDashboard = () => {
           return {
             ...workspace,
             owner: ownerData,
-            profiles: members || [],
-            projects: projects || [],
+            memberCount: membersRes.count || 0,
+            projectCount: projectsRes.count || 0,
           };
         })
       );
@@ -524,10 +524,10 @@ const AdminDashboard = () => {
                         {workspace.owner?.full_name || 'Unknown'}
                       </td>
                       <td className="workspace-members">
-                        {workspace.profiles?.length || 0}
+                        {workspace.memberCount || 0}
                       </td>
                       <td className="workspace-projects">
-                        {workspace.projects?.length || 0}
+                        {workspace.projectCount || 0}
                       </td>
                       <td className="workspace-created">
                         {format(new Date(workspace.created_at), 'MMM d, yyyy')}
@@ -699,7 +699,7 @@ const AdminDashboard = () => {
             This will permanently delete the workspace and ALL associated data including:
           </p>
           <ul className="delete-warning-list">
-            <li>{workspaceToDelete?.profiles?.length || 0} members</li>
+            <li>{workspaceToDelete?.memberCount || 0} members</li>
             <li>{workspaceToDelete?.projects?.length || 0} projects</li>
             <li>All tasks and data within projects</li>
             <li>All comments and activity history</li>
