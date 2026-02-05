@@ -378,6 +378,49 @@
   white-space: nowrap;
 }
 
+/* Audit Log Controls */
+.audit-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.audit-filter {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.audit-filter:hover {
+  border-color: var(--primary);
+}
+
+.audit-filter:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Audit Log Pagination */
+.audit-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  border-radius: 0 0 12px 12px;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+}
+
 /* Delete Modal */
 .delete-modal-content {
   display: flex;
@@ -683,6 +726,20 @@
 
   .audit-time {
     width: 100%;
+  }
+
+  .audit-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .audit-filter {
+    width: 100%;
+  }
+
+  .audit-pagination {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   /* Mobile Pagination */

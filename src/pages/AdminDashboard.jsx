@@ -62,6 +62,11 @@ const AdminDashboard = () => {
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState('desc');
 
+  // Audit log pagination state
+  const [auditLogPage, setAuditLogPage] = useState(1);
+  const [auditLogsPerPage] = useState(10);
+  const [auditLogFilter, setAuditLogFilter] = useState('all');
+
   // Check if user is system admin
   useEffect(() => {
     if (!profile?.is_system_admin) {
@@ -166,7 +171,7 @@ const AdminDashboard = () => {
           admin:profiles!workspace_audit_log_admin_id_fkey(id, full_name, email, avatar_url)
         `)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(50);
 
       if (error) throw error;
 
@@ -409,6 +414,25 @@ const AdminDashboard = () => {
     }
     setCurrentPage(1); // Reset to first page
   }, [sortField, sortDirection]);
+
+  // Memoized audit log filtering and pagination
+  const { filtered: filteredAuditLog, paginated: paginatedAuditLog, totalAuditPages } = useMemo(() => {
+    const filtered = auditLogFilter === 'all'
+      ? auditLog
+      : auditLog.filter(log => log.action === auditLogFilter);
+
+    const totalPages = Math.ceil(filtered.length / auditLogsPerPage);
+    const startIdx = (auditLogPage - 1) * auditLogsPerPage;
+    const paginated = filtered.slice(startIdx, startIdx + auditLogsPerPage);
+
+    return { filtered, paginated, totalAuditPages: totalPages };
+  }, [auditLog, auditLogFilter, auditLogPage, auditLogsPerPage]);
+
+  // Get unique audit log actions for filter dropdown
+  const auditActions = useMemo(() => {
+    const actions = [...new Set(auditLog.map(log => log.action))];
+    return actions.sort();
+  }, [auditLog]);
 
   if (loading && workspaces.length === 0) {
     return <Loading />;
@@ -724,18 +748,36 @@ const AdminDashboard = () => {
         <div className="admin-section audit-section">
           <div className="section-header">
             <h2>Recent Actions</h2>
-            <span className="log-count">{auditLog.length} recent actions</span>
+            <div className="audit-controls">
+              <select
+                value={auditLogFilter}
+                onChange={(e) => {
+                  setAuditLogFilter(e.target.value);
+                  setAuditLogPage(1);
+                }}
+                className="audit-filter"
+              >
+                <option value="all">All Actions</option>
+                {auditActions.map(action => (
+                  <option key={action} value={action}>
+                    {action.replace(/_/g, ' ')}
+                  </option>
+                ))}
+              </select>
+              <span className="log-count">{filteredAuditLog.length} actions</span>
+            </div>
           </div>
 
-          {auditLog.length === 0 ? (
+          {filteredAuditLog.length === 0 ? (
             <div className="empty-state">
               <Activity size={48} />
-              <h3>No audit log yet</h3>
-              <p>Administrative actions will appear here</p>
+              <h3>No actions found</h3>
+              <p>No administrative actions match your filter</p>
             </div>
           ) : (
-            <div className="audit-log">
-              {auditLog.map((log) => (
+            <>
+              <div className="audit-log">
+                {paginatedAuditLog.map((log) => (
                 <div key={log.id} className="audit-entry">
                   <div className="audit-icon">
                     {log.action === 'WORKSPACE_DELETED' && (
@@ -759,8 +801,51 @@ const AdminDashboard = () => {
                     {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
                   </span>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+
+              {/* Audit Log Pagination */}
+              {totalAuditPages > 1 && (
+                <div className="audit-pagination">
+                  <div className="pagination-info">
+                    Showing {(auditLogPage - 1) * auditLogsPerPage + 1} to {Math.min(auditLogPage * auditLogsPerPage, filteredAuditLog.length)} of {filteredAuditLog.length} actions
+                  </div>
+                  <div className="pagination-buttons">
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      icon={<ChevronLeft size={16} />}
+                      onClick={() => setAuditLogPage(p => Math.max(1, p - 1))}
+                      disabled={auditLogPage === 1}
+                    >
+                      Previous
+                    </Button>
+
+                    <div className="page-numbers">
+                      {Array.from({ length: totalAuditPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          className={`page-number ${auditLogPage === page ? 'active' : ''}`}
+                          onClick={() => setAuditLogPage(page)}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      icon={<ChevronRight size={16} />}
+                      onClick={() => setAuditLogPage(p => Math.min(totalAuditPages, p + 1))}
+                      disabled={auditLogPage === totalAuditPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
