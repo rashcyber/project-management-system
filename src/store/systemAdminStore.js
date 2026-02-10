@@ -94,7 +94,7 @@ const useSystemAdminStore = create((set, get) => ({
   },
 
   // Delete a workspace
-  deleteWorkspace: async (workspaceId, workspaceName) => {
+  deleteWorkspace: async (workspaceId, workspaceName, ownerId) => {
     set({ loading: true, error: null });
     try {
       const { error } = await supabase
@@ -103,6 +103,23 @@ const useSystemAdminStore = create((set, get) => ({
         .eq('id', workspaceId);
 
       if (error) throw error;
+
+      // Send notification to workspace owner
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (ownerId) {
+          await useNotificationStore.getState().createNotification({
+            userId: ownerId,
+            type: 'workspace_deleted',
+            title: 'Workspace deleted',
+            message: `Your workspace "${workspaceName}" has been deleted by a system administrator`,
+            actorId: currentUser?.id,
+          });
+        }
+      } catch (notifError) {
+        console.error('Error sending workspace deletion notification:', notifError);
+        // Don't fail the deletion if notification fails
+      }
 
       // Refresh workspaces list
       const state = get();

@@ -22,6 +22,7 @@ import {
 import { Button, Modal, Loading, Input, DeleteConfirmModal } from '../components/common';
 import useAuthStore from '../store/authStore';
 import useSystemAdminStore from '../store/systemAdminStore';
+import useNotificationStore from '../store/notificationStore';
 import { supabase } from '../lib/supabase';
 import { toast } from '../store/toastStore';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -230,6 +231,23 @@ const AdminDashboard = () => {
         .eq('id', workspaceToDelete.id);
 
       if (error) throw error;
+
+      // Send notification to workspace owner
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (workspaceToDelete.owner_id) {
+          await useNotificationStore.getState().createNotification({
+            userId: workspaceToDelete.owner_id,
+            type: 'workspace_deleted',
+            title: 'Workspace deleted',
+            message: `Your workspace "${workspaceToDelete.name}" has been deleted by a system administrator`,
+            actorId: currentUser?.id,
+          });
+        }
+      } catch (notifError) {
+        console.error('Error sending workspace deletion notification:', notifError);
+        // Don't fail the deletion if notification fails
+      }
 
       toast.success(`Workspace "${workspaceToDelete.name}" deleted successfully`);
       setShowDeleteModal(false);
