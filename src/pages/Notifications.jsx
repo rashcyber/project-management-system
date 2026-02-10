@@ -27,6 +27,7 @@ const NOTIFICATION_ICONS = {
   system_admin_promoted: Shield,
   system_admin_demoted: ShieldOff,
   workspace_deleted: Trash2,
+  workspace_archived: FolderKanban,
 };
 
 const Notifications = () => {

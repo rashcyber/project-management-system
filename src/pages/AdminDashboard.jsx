@@ -18,6 +18,12 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Archive,
+  RotateCcw,
+  Clock,
+  CheckCircle2,
+  LogIn,
+  LogOutIcon,
 } from 'lucide-react';
 import { Button, Modal, Loading, Input, DeleteConfirmModal } from '../components/common';
 import useAuthStore from '../store/authStore';
@@ -62,6 +68,12 @@ const AdminDashboard = () => {
   const [promoteLoading, setPromoteLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
+  // Archive and active admin state
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [workspaceToArchive, setWorkspaceToArchive] = useState(null);
+  const [showActiveAdminsModal, setShowActiveAdminsModal] = useState(false);
+  const [adminActivityLog, setAdminActivityLog] = useState([]);
+
   // Pagination and sorting state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
@@ -92,6 +104,7 @@ const AdminDashboard = () => {
             loadAuditLog(),
             loadStats(),
             loadSystemAdmins(),
+            loadAdminActivityLog(),
           ]);
         } catch (error) {
           console.error('Error loading admin dashboard data:', error);
@@ -262,6 +275,97 @@ const AdminDashboard = () => {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Archive workspace function
+  const handleArchiveClick = (workspace) => {
+    setWorkspaceToArchive(workspace);
+    setShowArchiveModal(true);
+  };
+
+  const handleConfirmArchive = async () => {
+    if (!workspaceToArchive) return;
+
+    try {
+      setLoading(true);
+
+      // Archive workspace (set is_archived flag)
+      const { error } = await supabase
+        .from('workspaces')
+        .update({ is_archived: true, archived_at: new Date().toISOString(), archived_by: profile?.id })
+        .eq('id', workspaceToArchive.id);
+
+      if (error) throw error;
+
+      // Log the archive action
+      await supabase
+        .from('workspace_audit_log')
+        .insert({
+          admin_id: profile?.id,
+          workspace_id: workspaceToArchive.id,
+          workspace_name: workspaceToArchive.name,
+          action: 'WORKSPACE_ARCHIVED',
+          details: {
+            archived_at: new Date().toISOString(),
+            reason: 'System admin action',
+          },
+        });
+
+      // Send notification to workspace owner
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (workspaceToArchive.owner_id) {
+          await useNotificationStore.getState().createNotification({
+            userId: workspaceToArchive.owner_id,
+            type: 'workspace_archived',
+            title: 'Workspace archived',
+            message: `Your workspace "${workspaceToArchive.name}" has been archived by a system administrator`,
+            actorId: currentUser?.id,
+          });
+        }
+      } catch (notifError) {
+        console.error('Error sending workspace archive notification:', notifError);
+      }
+
+      toast.success(`Workspace "${workspaceToArchive.name}" archived successfully`);
+      setShowArchiveModal(false);
+      setWorkspaceToArchive(null);
+
+      // Reload data
+      loadWorkspaces();
+      loadAuditLog();
+      loadStats();
+    } catch (error) {
+      toast.error('Failed to archive workspace');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch admin activity log
+  const loadAdminActivityLog = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('workspace_audit_log')
+        .select(`
+          id,
+          admin_id,
+          workspace_name,
+          action,
+          details,
+          created_at,
+          admin:profiles!workspace_audit_log_admin_id_fkey(id, full_name, email, avatar_url, is_system_admin)
+        `)
+        .in('action', ['SYSTEM_ADMIN_PROMOTED', 'SYSTEM_ADMIN_DEMOTED', 'WORKSPACE_DELETED', 'WORKSPACE_ARCHIVED'])
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setAdminActivityLog(data || []);
+    } catch (error) {
+      console.error('Failed to load admin activity:', error);
     }
   };
 
@@ -668,6 +772,60 @@ const AdminDashboard = () => {
           )}
         </div>
 
+        {/* Active Admins Section */}
+        <div className="admin-section">
+          <div className="section-header">
+            <h2>System Admin Activity</h2>
+            <Button
+              variant="secondary"
+              size="small"
+              icon={<Activity size={16} />}
+              onClick={() => setShowActiveAdminsModal(true)}
+            >
+              View Activity Log
+            </Button>
+          </div>
+
+          {adminActivityLog.length === 0 ? (
+            <div className="empty-state">
+              <Activity size={32} />
+              <p>No admin activity logged yet</p>
+            </div>
+          ) : (
+            <div className="admin-activity-summary">
+              {adminActivityLog.slice(0, 5).map((log) => (
+                <div key={log.id} className="activity-item">
+                  <div className="activity-icon">
+                    {log.action === 'SYSTEM_ADMIN_PROMOTED' && <CheckCircle2 size={18} color="#22c55e" />}
+                    {log.action === 'SYSTEM_ADMIN_DEMOTED' && <LogOutIcon size={18} color="#ef4444" />}
+                    {log.action === 'WORKSPACE_DELETED' && <Trash2 size={18} color="#ef4444" />}
+                    {log.action === 'WORKSPACE_ARCHIVED' && <Archive size={18} color="#f59e0b" />}
+                  </div>
+                  <div className="activity-details">
+                    <span className="activity-action">
+                      {log.action === 'SYSTEM_ADMIN_PROMOTED' && 'User promoted to admin'}
+                      {log.action === 'SYSTEM_ADMIN_DEMOTED' && 'User demoted from admin'}
+                      {log.action === 'WORKSPACE_DELETED' && 'Workspace deleted'}
+                      {log.action === 'WORKSPACE_ARCHIVED' && 'Workspace archived'}
+                    </span>
+                    <span className="activity-admin">by {log.admin?.full_name || 'System'}</span>
+                    <span className="activity-time">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
+                  </div>
+                </div>
+              ))}
+              <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onClick={() => setShowActiveAdminsModal(true)}
+                >
+                  See all activity ({adminActivityLog.length} total)
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Workspaces Section */}
         <div className="admin-section">
           <div className="section-header">
@@ -787,6 +945,13 @@ const AdminDashboard = () => {
                         })()}
                       </td>
                       <td className="workspace-actions">
+                        <button
+                          className="archive-workspace-btn"
+                          onClick={() => handleArchiveClick(workspace)}
+                          title="Archive workspace"
+                        >
+                          <Archive size={16} />
+                        </button>
                         <button
                           className="delete-workspace-btn"
                           onClick={() => handleDeleteClick(workspace)}
@@ -1034,6 +1199,99 @@ const AdminDashboard = () => {
         variant="warning"
         isLoading={promoteLoading}
       />
+
+      {/* Active Admins Activity Modal */}
+      <Modal
+        isOpen={showActiveAdminsModal}
+        onClose={() => setShowActiveAdminsModal(false)}
+        title="System Admin Activity Log"
+        size="medium"
+      >
+        <div className="activity-log-modal">
+          {adminActivityLog.length === 0 ? (
+            <div className="empty-state">
+              <Activity size={48} />
+              <h3>No activity logged</h3>
+              <p>Admin actions will appear here</p>
+            </div>
+          ) : (
+            <div className="activity-list">
+              {adminActivityLog.map((log) => (
+                <div key={log.id} className="activity-log-entry">
+                  <div className="entry-icon">
+                    {log.action === 'SYSTEM_ADMIN_PROMOTED' && <CheckCircle2 size={20} color="#22c55e" />}
+                    {log.action === 'SYSTEM_ADMIN_DEMOTED' && <LogOutIcon size={20} color="#ef4444" />}
+                    {log.action === 'WORKSPACE_DELETED' && <Trash2 size={20} color="#ef4444" />}
+                    {log.action === 'WORKSPACE_ARCHIVED' && <Archive size={20} color="#f59e0b" />}
+                  </div>
+                  <div className="entry-content">
+                    <div className="entry-action">
+                      {log.action === 'SYSTEM_ADMIN_PROMOTED' && '✓ User promoted to System Admin'}
+                      {log.action === 'SYSTEM_ADMIN_DEMOTED' && '✗ User demoted from System Admin'}
+                      {log.action === 'WORKSPACE_DELETED' && '🗑️ Workspace permanently deleted'}
+                      {log.action === 'WORKSPACE_ARCHIVED' && '📦 Workspace archived'}
+                    </div>
+                    <div className="entry-details">
+                      <span className="detail-admin">Admin: {log.admin?.full_name || 'System'}</span>
+                      <span className="detail-separator">•</span>
+                      <span className="detail-time">{format(new Date(log.created_at), 'PPpp')}</span>
+                    </div>
+                    {log.workspace_name && (
+                      <div className="entry-workspace">
+                        Workspace: <strong>{log.workspace_name}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Archive Workspace Modal */}
+      <Modal
+        isOpen={showArchiveModal}
+        onClose={() => setShowArchiveModal(false)}
+        title="Archive Workspace"
+        size="small"
+      >
+        <div className="delete-modal-content">
+          <div className="delete-warning" style={{ color: '#f59e0b' }}>
+            <Archive size={32} color="#f59e0b" />
+          </div>
+          <p>
+            Are you sure you want to archive <strong>{workspaceToArchive?.name}</strong>?
+          </p>
+          <p className="delete-warning-text">
+            Archiving will:
+          </p>
+          <ul className="delete-warning-list">
+            <li>Hide the workspace from regular views</li>
+            <li>Preserve all data and history</li>
+            <li>Allow restoration later if needed</li>
+            <li>Keep members and projects intact</li>
+          </ul>
+          <p style={{ color: '#f59e0b', fontWeight: 500 }}>
+            📌 The workspace owner will be notified of this action.
+          </p>
+          <div className="delete-modal-actions">
+            <Button
+              variant="secondary"
+              onClick={() => setShowArchiveModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirmArchive}
+              loading={loading}
+            >
+              Archive Workspace
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Delete Workspace Modal */}
       <Modal

@@ -317,7 +317,8 @@
   text-align: right;
 }
 
-.delete-workspace-btn {
+.delete-workspace-btn,
+.archive-workspace-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -326,10 +327,23 @@
   padding: 0;
   background: transparent;
   border: none;
-  color: var(--danger);
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.2s ease;
+  margin-left: 0.5rem;
+}
+
+.archive-workspace-btn {
+  color: #f59e0b;
+}
+
+.archive-workspace-btn:hover {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.delete-workspace-btn {
+  color: var(--danger);
 }
 
 .delete-workspace-btn:hover {
@@ -591,6 +605,133 @@
   color: var(--danger);
   font-size: 0.875rem !important;
   margin: 0 !important;
+}
+
+/* Admin Activity Section */
+.admin-activity-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  border-left: 3px solid var(--primary);
+  transition: all 0.2s ease;
+}
+
+.activity-item:hover {
+  background-color: var(--bg-tertiary);
+  transform: translateX(4px);
+}
+
+.activity-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activity-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.activity-action {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.activity-admin {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Activity Log Modal */
+.activity-log-modal {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activity-log-entry {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  border-left: 3px solid var(--primary);
+}
+
+.entry-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-tertiary);
+  border-radius: 8px;
+}
+
+.entry-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.entry-action {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.entry-details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.detail-admin {
+  font-weight: 500;
+}
+
+.detail-separator {
+  opacity: 0.5;
+}
+
+.detail-time {
+  font-style: italic;
+}
+
+.entry-workspace {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-light);
 }
 
 /* System Admin Section */
