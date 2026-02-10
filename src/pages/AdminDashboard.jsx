@@ -73,6 +73,10 @@ const AdminDashboard = () => {
   const [workspaceToArchive, setWorkspaceToArchive] = useState(null);
   const [showActiveAdminsModal, setShowActiveAdminsModal] = useState(false);
   const [adminActivityLog, setAdminActivityLog] = useState([]);
+  const [archivedWorkspaces, setArchivedWorkspaces] = useState([]);
+  const [showArchivedOnly, setShowArchivedOnly] = useState(false);
+  const [showUnarchiveModal, setShowUnarchiveModal] = useState(false);
+  const [workspaceToUnarchive, setWorkspaceToUnarchive] = useState(null);
 
   // Pagination and sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -101,6 +105,7 @@ const AdminDashboard = () => {
         try {
           await Promise.all([
             loadWorkspaces(),
+            loadArchivedWorkspaces(),
             loadAuditLog(),
             loadStats(),
             loadSystemAdmins(),
@@ -134,9 +139,11 @@ const AdminDashboard = () => {
   const loadWorkspaces = async () => {
     try {
       // Use simpler query to avoid RLS issues
+      // Show only non-archived workspaces in main view
       const { data, error } = await supabase
         .from('workspaces')
-        .select('id, name, owner_id, created_at, updated_at')
+        .select('id, name, owner_id, created_at, updated_at, is_archived')
+        .eq('is_archived', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -186,6 +193,7 @@ const AdminDashboard = () => {
           admin_id,
           workspace_name,
           action,
+          details,
           created_at,
           admin:profiles!workspace_audit_log_admin_id_fkey(id, full_name, email, avatar_url)
         `)
@@ -278,6 +286,72 @@ const AdminDashboard = () => {
     }
   };
 
+  // Unarchive workspace function
+  const handleUnarchiveClick = (workspace) => {
+    setWorkspaceToUnarchive(workspace);
+    setShowUnarchiveModal(true);
+  };
+
+  const handleConfirmUnarchive = async () => {
+    if (!workspaceToUnarchive) return;
+
+    try {
+      setLoading(true);
+
+      // Unarchive workspace
+      const { error } = await supabase
+        .from('workspaces')
+        .update({ is_archived: false, archived_at: null, archived_by: null })
+        .eq('id', workspaceToUnarchive.id);
+
+      if (error) throw error;
+
+      // Log the unarchive action
+      await supabase
+        .from('workspace_audit_log')
+        .insert({
+          admin_id: profile?.id,
+          workspace_id: workspaceToUnarchive.id,
+          workspace_name: workspaceToUnarchive.name,
+          action: 'WORKSPACE_UNARCHIVED',
+          details: {
+            unarchived_at: new Date().toISOString(),
+          },
+        });
+
+      // Send notification to workspace owner
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (workspaceToUnarchive.owner_id) {
+          await useNotificationStore.getState().createNotification({
+            userId: workspaceToUnarchive.owner_id,
+            type: 'workspace_unarchived',
+            title: 'Workspace restored',
+            message: `Your workspace "${workspaceToUnarchive.name}" has been restored by a system administrator`,
+            actorId: currentUser?.id,
+          });
+        }
+      } catch (notifError) {
+        console.error('Error sending unarchive notification:', notifError);
+      }
+
+      toast.success(`Workspace "${workspaceToUnarchive.name}" restored successfully`);
+      setShowUnarchiveModal(false);
+      setWorkspaceToUnarchive(null);
+
+      // Reload data
+      loadWorkspaces();
+      loadArchivedWorkspaces();
+      loadAuditLog();
+      loadAdminActivityLog();
+    } catch (error) {
+      toast.error('Failed to restore workspace');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Archive workspace function
   const handleArchiveClick = (workspace) => {
     setWorkspaceToArchive(workspace);
@@ -341,6 +415,51 @@ const AdminDashboard = () => {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load archived workspaces
+  const loadArchivedWorkspaces = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('workspaces')
+        .select('id, name, owner_id, created_at, updated_at, is_archived, archived_at, archived_by')
+        .eq('is_archived', true)
+        .order('archived_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Enrich with owner and counts
+      const enrichedData = await Promise.all(
+        (data || []).map(async (workspace) => {
+          const { data: ownerData } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, avatar_url')
+            .eq('id', workspace.owner_id)
+            .single();
+
+          const membersRes = await supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .eq('workspace_id', workspace.id);
+
+          const projectsRes = await supabase
+            .from('projects')
+            .select('id', { count: 'exact', head: true })
+            .eq('workspace_id', workspace.id);
+
+          return {
+            ...workspace,
+            owner: ownerData,
+            memberCount: membersRes.count || 0,
+            projectCount: projectsRes.count || 0,
+          };
+        })
+      );
+
+      setArchivedWorkspaces(enrichedData || []);
+    } catch (error) {
+      console.error('Failed to load archived workspaces:', error);
     }
   };
 
@@ -803,10 +922,10 @@ const AdminDashboard = () => {
                   </div>
                   <div className="activity-details">
                     <span className="activity-action">
-                      {log.action === 'SYSTEM_ADMIN_PROMOTED' && 'User promoted to admin'}
-                      {log.action === 'SYSTEM_ADMIN_DEMOTED' && 'User demoted from admin'}
-                      {log.action === 'WORKSPACE_DELETED' && 'Workspace deleted'}
-                      {log.action === 'WORKSPACE_ARCHIVED' && 'Workspace archived'}
+                      {log.action === 'SYSTEM_ADMIN_PROMOTED' && `${log.details?.promoted_user_name || 'User'} promoted to admin`}
+                      {log.action === 'SYSTEM_ADMIN_DEMOTED' && `${log.details?.demoted_user_name || 'User'} demoted from admin`}
+                      {log.action === 'WORKSPACE_DELETED' && `${log.workspace_name} deleted`}
+                      {log.action === 'WORKSPACE_ARCHIVED' && `${log.workspace_name} archived`}
                     </span>
                     <span className="activity-admin">by {log.admin?.full_name || 'System'}</span>
                     <span className="activity-time">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
@@ -829,141 +948,181 @@ const AdminDashboard = () => {
         {/* Workspaces Section */}
         <div className="admin-section">
           <div className="section-header">
-            <h2>All Workspaces</h2>
-            <div className="section-controls">
-              <div className="search-wrapper">
-                <Search size={18} />
-                <input
-                  type="text"
-                  placeholder="Search workspaces..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="search-input"
-                />
-              </div>
-              <span className="workspace-count">
-                {filtered.length} workspace{filtered.length !== 1 ? 's' : ''}
-              </span>
+            <div>
+              <h2>{showArchivedOnly ? 'Archived Workspaces' : 'All Workspaces'}</h2>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0' }}>
+                {showArchivedOnly
+                  ? `${archivedWorkspaces.length} archived`
+                  : `${filtered.length} active`}
+              </p>
+            </div>
+            <Button
+              variant={showArchivedOnly ? 'primary' : 'secondary'}
+              size="small"
+              icon={showArchivedOnly ? <Building2 size={16} /> : <Archive size={16} />}
+              onClick={() => {
+                setShowArchivedOnly(!showArchivedOnly);
+                setCurrentPage(1);
+              }}
+            >
+              {showArchivedOnly ? 'Show Active' : 'Show Archived'}
+            </Button>
+          </div>
+
+          <div className="section-controls" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <div className="search-wrapper">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder={showArchivedOnly ? 'Search archived workspaces...' : 'Search workspaces...'}
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="search-input"
+              />
             </div>
           </div>
 
-          {filtered.length === 0 ? (
-            <div className="empty-state">
-              <Building2 size={48} />
-              <h3>No workspaces found</h3>
-              <p>No workspaces match your search</p>
-            </div>
-          ) : (
-            <div className="workspaces-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th
-                      className="sortable-header"
-                      onClick={() => handleSort('name')}
-                      title="Click to sort"
-                    >
-                      Workspace Name
-                      {sortField === 'name' && (
-                        sortDirection === 'asc' ?
-                          <ChevronUp size={16} className="sort-icon" /> :
-                          <ChevronDown size={16} className="sort-icon" />
-                      )}
-                    </th>
-                    <th
-                      className="sortable-header"
-                      onClick={() => handleSort('owner')}
-                      title="Click to sort"
-                    >
-                      Owner
-                      {sortField === 'owner' && (
-                        sortDirection === 'asc' ?
-                          <ChevronUp size={16} className="sort-icon" /> :
-                          <ChevronDown size={16} className="sort-icon" />
-                      )}
-                    </th>
-                    <th
-                      className="sortable-header"
-                      onClick={() => handleSort('memberCount')}
-                      title="Click to sort"
-                    >
-                      Members
-                      {sortField === 'memberCount' && (
-                        sortDirection === 'asc' ?
-                          <ChevronUp size={16} className="sort-icon" /> :
-                          <ChevronDown size={16} className="sort-icon" />
-                      )}
-                    </th>
-                    <th
-                      className="sortable-header"
-                      onClick={() => handleSort('projectCount')}
-                      title="Click to sort"
-                    >
-                      Projects
-                      {sortField === 'projectCount' && (
-                        sortDirection === 'asc' ?
-                          <ChevronUp size={16} className="sort-icon" /> :
-                          <ChevronDown size={16} className="sort-icon" />
-                      )}
-                    </th>
-                    <th
-                      className="sortable-header"
-                      onClick={() => handleSort('created_at')}
-                      title="Click to sort"
-                    >
-                      Created
-                      {sortField === 'created_at' && (
-                        sortDirection === 'asc' ?
-                          <ChevronUp size={16} className="sort-icon" /> :
-                          <ChevronDown size={16} className="sort-icon" />
-                      )}
-                    </th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.map((workspace) => (
-                    <tr key={workspace.id} className="workspace-row">
-                      <td className="workspace-name">{workspace.name}</td>
-                      <td className="workspace-owner">
-                        {workspace.owner?.full_name || 'Unknown'}
-                      </td>
-                      <td className="workspace-members">
-                        {workspace.memberCount || 0}
-                      </td>
-                      <td className="workspace-projects">
-                        {workspace.projectCount || 0}
-                      </td>
-                      <td className="workspace-created">
-                        {format(new Date(workspace.created_at), 'MMM d, yyyy')}
-                      </td>
-                      <td className="workspace-status">
-                        {(() => {
-                          const status = getWorkspaceStatus(workspace);
-                          return <span className={`status-badge ${status.class}`}>{status.label}</span>;
-                        })()}
-                      </td>
-                      <td className="workspace-actions">
-                        <button
-                          className="archive-workspace-btn"
-                          onClick={() => handleArchiveClick(workspace)}
-                          title="Archive workspace"
-                        >
-                          <Archive size={16} />
-                        </button>
-                        <button
-                          className="delete-workspace-btn"
-                          onClick={() => handleDeleteClick(workspace)}
-                          title="Delete workspace"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
+          {(() => {
+            const displayData = showArchivedOnly ? archivedWorkspaces : (filtered.length > 0 ? paginated : []);
+            const displayText = showArchivedOnly ? 'No archived workspaces found' : 'No workspaces found';
+
+            if (displayData.length === 0) {
+              return (
+                <div className="empty-state">
+                  <Building2 size={48} />
+                  <h3>{displayText}</h3>
+                  <p>{showArchivedOnly ? 'No workspaces have been archived yet' : 'No workspaces match your search'}</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="workspaces-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th
+                        className="sortable-header"
+                        onClick={() => handleSort('name')}
+                        title="Click to sort"
+                      >
+                        Workspace Name
+                        {sortField === 'name' && (
+                          sortDirection === 'asc' ?
+                            <ChevronUp size={16} className="sort-icon" /> :
+                            <ChevronDown size={16} className="sort-icon" />
+                        )}
+                      </th>
+                      <th
+                        className="sortable-header"
+                        onClick={() => handleSort('owner')}
+                        title="Click to sort"
+                      >
+                        Owner
+                        {sortField === 'owner' && (
+                          sortDirection === 'asc' ?
+                            <ChevronUp size={16} className="sort-icon" /> :
+                            <ChevronDown size={16} className="sort-icon" />
+                        )}
+                      </th>
+                      <th
+                        className="sortable-header"
+                        onClick={() => handleSort('memberCount')}
+                        title="Click to sort"
+                      >
+                        Members
+                        {sortField === 'memberCount' && (
+                          sortDirection === 'asc' ?
+                            <ChevronUp size={16} className="sort-icon" /> :
+                            <ChevronDown size={16} className="sort-icon" />
+                        )}
+                      </th>
+                      <th
+                        className="sortable-header"
+                        onClick={() => handleSort('projectCount')}
+                        title="Click to sort"
+                      >
+                        Projects
+                        {sortField === 'projectCount' && (
+                          sortDirection === 'asc' ?
+                            <ChevronUp size={16} className="sort-icon" /> :
+                            <ChevronDown size={16} className="sort-icon" />
+                        )}
+                      </th>
+                      <th
+                        className="sortable-header"
+                        onClick={() => handleSort('created_at')}
+                        title="Click to sort"
+                      >
+                        {showArchivedOnly ? 'Archived' : 'Created'}
+                        {sortField === 'created_at' && (
+                          sortDirection === 'asc' ?
+                            <ChevronUp size={16} className="sort-icon" /> :
+                            <ChevronDown size={16} className="sort-icon" />
+                        )}
+                      </th>
+                      <th>Status</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {displayData.map((workspace) => (
+                      <tr key={workspace.id} className="workspace-row">
+                        <td className="workspace-name">{workspace.name}</td>
+                        <td className="workspace-owner">
+                          {workspace.owner?.full_name || 'Unknown'}
+                        </td>
+                        <td className="workspace-members">
+                          {workspace.memberCount || 0}
+                        </td>
+                        <td className="workspace-projects">
+                          {workspace.projectCount || 0}
+                        </td>
+                        <td className="workspace-created">
+                          {format(new Date(showArchivedOnly ? workspace.archived_at : workspace.created_at), 'MMM d, yyyy')}
+                        </td>
+                        <td className="workspace-status">
+                          {showArchivedOnly ? (
+                            <span className="status-badge" style={{backgroundColor: 'rgba(156, 163, 175, 0.1)', color: '#6b7280'}}>Archived</span>
+                          ) : (
+                            (() => {
+                              const status = getWorkspaceStatus(workspace);
+                              return <span className={`status-badge ${status.class}`}>{status.label}</span>;
+                            })()
+                          )}
+                        </td>
+                        <td className="workspace-actions">
+                          {showArchivedOnly ? (
+                            <button
+                              className="restore-workspace-btn"
+                              onClick={() => handleUnarchiveClick(workspace)}
+                              title="Restore workspace"
+                            >
+                              <RotateCcw size={16} />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                className="archive-workspace-btn"
+                                onClick={() => handleArchiveClick(workspace)}
+                                title="Archive workspace"
+                              >
+                                <Archive size={16} />
+                              </button>
+                              <button
+                                className="delete-workspace-btn"
+                                onClick={() => handleDeleteClick(workspace)}
+                                title="Delete workspace"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
@@ -1226,17 +1385,22 @@ const AdminDashboard = () => {
                   </div>
                   <div className="entry-content">
                     <div className="entry-action">
-                      {log.action === 'SYSTEM_ADMIN_PROMOTED' && '✓ User promoted to System Admin'}
-                      {log.action === 'SYSTEM_ADMIN_DEMOTED' && '✗ User demoted from System Admin'}
-                      {log.action === 'WORKSPACE_DELETED' && '🗑️ Workspace permanently deleted'}
-                      {log.action === 'WORKSPACE_ARCHIVED' && '📦 Workspace archived'}
+                      {log.action === 'SYSTEM_ADMIN_PROMOTED' && `✓ ${log.details?.promoted_user_name || 'User'} promoted to System Admin`}
+                      {log.action === 'SYSTEM_ADMIN_DEMOTED' && `✗ ${log.details?.demoted_user_name || 'User'} demoted from System Admin`}
+                      {log.action === 'WORKSPACE_DELETED' && `🗑️ ${log.workspace_name} permanently deleted`}
+                      {log.action === 'WORKSPACE_ARCHIVED' && `📦 ${log.workspace_name} archived`}
                     </div>
                     <div className="entry-details">
-                      <span className="detail-admin">Admin: {log.admin?.full_name || 'System'}</span>
+                      <span className="detail-admin">By: {log.admin?.full_name || 'System'}</span>
                       <span className="detail-separator">•</span>
                       <span className="detail-time">{format(new Date(log.created_at), 'PPpp')}</span>
                     </div>
-                    {log.workspace_name && (
+                    {(log.action === 'SYSTEM_ADMIN_PROMOTED' || log.action === 'SYSTEM_ADMIN_DEMOTED') && log.details?.promoted_user_email && (
+                      <div className="entry-workspace">
+                        User: <strong>{log.details.promoted_user_email || log.details.demoted_user_email}</strong>
+                      </div>
+                    )}
+                    {(log.action === 'WORKSPACE_DELETED' || log.action === 'WORKSPACE_ARCHIVED') && log.workspace_name && (
                       <div className="entry-workspace">
                         Workspace: <strong>{log.workspace_name}</strong>
                       </div>
@@ -1246,6 +1410,50 @@ const AdminDashboard = () => {
               ))}
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* Unarchive Workspace Modal */}
+      <Modal
+        isOpen={showUnarchiveModal}
+        onClose={() => setShowUnarchiveModal(false)}
+        title="Restore Workspace"
+        size="small"
+      >
+        <div className="delete-modal-content">
+          <div className="delete-warning" style={{ color: '#22c55e' }}>
+            <RotateCcw size={32} color="#22c55e" />
+          </div>
+          <p>
+            Are you sure you want to restore <strong>{workspaceToUnarchive?.name}</strong>?
+          </p>
+          <p className="delete-warning-text">
+            Restoring will:
+          </p>
+          <ul className="delete-warning-list">
+            <li>Make the workspace visible again</li>
+            <li>Restore all members and projects</li>
+            <li>Resume normal operations</li>
+            <li>Notify the workspace owner</li>
+          </ul>
+          <p style={{ color: '#22c55e', fontWeight: 500 }}>
+            ✓ All data has been preserved safely.
+          </p>
+          <div className="delete-modal-actions">
+            <Button
+              variant="secondary"
+              onClick={() => setShowUnarchiveModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirmUnarchive}
+              loading={loading}
+            >
+              Restore Workspace
+            </Button>
+          </div>
         </div>
       </Modal>
 
