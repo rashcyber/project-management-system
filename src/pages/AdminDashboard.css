@@ -205,83 +205,131 @@
   color: var(--text-secondary);
 }
 
-/* Workspaces Table */
-.workspaces-table {
-  overflow-x: auto;
-  border-radius: 12px;
+/* Workspaces Container - Card Based Layout */
+.workspaces-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.workspaces-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.sort-options {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sort-btn {
+  padding: 0.5rem 0.875rem;
   border: 1px solid var(--border-color);
   background-color: var(--bg-primary);
-}
-
-.workspaces-table table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.workspaces-table thead {
-  background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.workspaces-table th {
-  padding: 1rem 1.25rem;
-  text-align: left;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  vertical-align: middle;
-}
-
-/* Column widths */
-.workspaces-table th:nth-child(1) { width: 24%; }
-.workspaces-table th:nth-child(2) { width: 18%; }
-.workspaces-table th:nth-child(3) { width: 11%; }
-.workspaces-table th:nth-child(4) { width: 11%; }
-.workspaces-table th:nth-child(5) { width: 13%; }
-.workspaces-table th:nth-child(6) { width: 11%; }
-.workspaces-table th:nth-child(7) { width: 12%; }
-
-.workspace-row {
-  border-bottom: 1px solid var(--border-light);
-  transition: all 0.2s ease;
-}
-
-.workspace-row:hover {
-  background-color: rgba(59, 130, 246, 0.02);
-}
-
-.workspace-row:last-child {
-  border-bottom: none;
-}
-
-.workspaces-table td {
-  padding: 1rem 1.25rem;
-  font-size: 0.875rem;
   color: var(--text-primary);
-}
-
-.workspace-name {
-  font-weight: 600;
-  color: var(--primary);
-}
-
-.workspace-owner {
-  color: var(--text-secondary);
-}
-
-.workspace-members,
-.workspace-projects {
-  text-align: center;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.workspace-created {
-  color: var(--text-secondary);
+  border-radius: 6px;
   font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.sort-btn:hover {
+  border-color: var(--primary);
+  background-color: var(--bg-secondary);
+}
+
+.sort-btn.active {
+  background-color: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* Workspaces Grid */
+.workspaces-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.workspace-card {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.workspace-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.card-title-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  word-break: break-word;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.card-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.info-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.info-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
 }
 
 .workspace-status {
@@ -1032,6 +1080,44 @@
 
   .health-card {
     padding: 1rem;
+  }
+
+  /* Mobile Workspace Cards */
+  .workspaces-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sort-options {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .sort-btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-title-section {
+    width: 100%;
+  }
+
+  .card-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .card-info-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .info-value {
+    text-align: left;
   }
 
   /* Mobile Pagination */

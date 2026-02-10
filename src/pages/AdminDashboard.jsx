@@ -425,9 +425,12 @@ const AdminDashboard = () => {
         .from('workspaces')
         .select('id, name, owner_id, created_at, updated_at, is_archived, archived_at, archived_by')
         .eq('is_archived', true)
-        .order('archived_at', { ascending: false });
+        .order('archived_at', { ascending: false, nullsLast: false })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      console.log('Archived workspaces loaded:', data);
 
       // Enrich with owner and counts
       const enrichedData = await Promise.all(
@@ -997,108 +1000,73 @@ const AdminDashboard = () => {
             }
 
             return (
-              <div className="workspaces-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th
-                        className="sortable-header"
-                        onClick={() => handleSort('name')}
-                        title="Click to sort"
-                      >
-                        Workspace Name
-                        {sortField === 'name' && (
-                          sortDirection === 'asc' ?
-                            <ChevronUp size={16} className="sort-icon" /> :
-                            <ChevronDown size={16} className="sort-icon" />
-                        )}
-                      </th>
-                      <th
-                        className="sortable-header"
-                        onClick={() => handleSort('owner')}
-                        title="Click to sort"
-                      >
-                        Owner
-                        {sortField === 'owner' && (
-                          sortDirection === 'asc' ?
-                            <ChevronUp size={16} className="sort-icon" /> :
-                            <ChevronDown size={16} className="sort-icon" />
-                        )}
-                      </th>
-                      <th
-                        className="sortable-header"
-                        onClick={() => handleSort('memberCount')}
-                        title="Click to sort"
-                      >
-                        Members
-                        {sortField === 'memberCount' && (
-                          sortDirection === 'asc' ?
-                            <ChevronUp size={16} className="sort-icon" /> :
-                            <ChevronDown size={16} className="sort-icon" />
-                        )}
-                      </th>
-                      <th
-                        className="sortable-header"
-                        onClick={() => handleSort('projectCount')}
-                        title="Click to sort"
-                      >
-                        Projects
-                        {sortField === 'projectCount' && (
-                          sortDirection === 'asc' ?
-                            <ChevronUp size={16} className="sort-icon" /> :
-                            <ChevronDown size={16} className="sort-icon" />
-                        )}
-                      </th>
-                      <th
-                        className="sortable-header"
-                        onClick={() => handleSort('created_at')}
-                        title="Click to sort"
-                      >
-                        {showArchivedOnly ? 'Archived' : 'Created'}
-                        {sortField === 'created_at' && (
-                          sortDirection === 'asc' ?
-                            <ChevronUp size={16} className="sort-icon" /> :
-                            <ChevronDown size={16} className="sort-icon" />
-                        )}
-                      </th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayData.map((workspace) => (
-                      <tr key={workspace.id} className="workspace-row">
-                        <td className="workspace-name">{workspace.name}</td>
-                        <td className="workspace-owner">
-                          {workspace.owner?.full_name || 'Unknown'}
-                        </td>
-                        <td className="workspace-members">
-                          {workspace.memberCount || 0}
-                        </td>
-                        <td className="workspace-projects">
-                          {workspace.projectCount || 0}
-                        </td>
-                        <td className="workspace-created">
-                          {format(new Date(showArchivedOnly ? workspace.archived_at : workspace.created_at), 'MMM d, yyyy')}
-                        </td>
-                        <td className="workspace-status">
-                          {showArchivedOnly ? (
-                            <span className="status-badge" style={{backgroundColor: 'rgba(156, 163, 175, 0.1)', color: '#6b7280'}}>Archived</span>
-                          ) : (
-                            (() => {
+              <div className="workspaces-container">
+                {/* Sort Controls */}
+                <div className="workspaces-controls">
+                  <div className="sort-options">
+                    <button
+                      className={`sort-btn ${sortField === 'name' ? 'active' : ''}`}
+                      onClick={() => handleSort('name')}
+                      title="Sort by name"
+                    >
+                      Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </button>
+                    <button
+                      className={`sort-btn ${sortField === 'owner' ? 'active' : ''}`}
+                      onClick={() => handleSort('owner')}
+                      title="Sort by owner"
+                    >
+                      Owner {sortField === 'owner' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </button>
+                    <button
+                      className={`sort-btn ${sortField === 'memberCount' ? 'active' : ''}`}
+                      onClick={() => handleSort('memberCount')}
+                      title="Sort by members"
+                    >
+                      Members {sortField === 'memberCount' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </button>
+                    <button
+                      className={`sort-btn ${sortField === 'projectCount' ? 'active' : ''}`}
+                      onClick={() => handleSort('projectCount')}
+                      title="Sort by projects"
+                    >
+                      Projects {sortField === 'projectCount' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </button>
+                    <button
+                      className={`sort-btn ${sortField === 'created_at' ? 'active' : ''}`}
+                      onClick={() => handleSort('created_at')}
+                      title={`Sort by ${showArchivedOnly ? 'archive' : 'creation'} date`}
+                    >
+                      {showArchivedOnly ? 'Archived' : 'Created'} {sortField === 'created_at' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Card Grid */}
+                <div className="workspaces-grid">
+                  {displayData.map((workspace) => (
+                    <div key={workspace.id} className="workspace-card">
+                      <div className="card-header">
+                        <div className="card-title-section">
+                          <h3 className="card-title">{workspace.name}</h3>
+                          <span className={`status-badge ${showArchivedOnly ? '' : ((() => {
+                            const status = getWorkspaceStatus(workspace);
+                            return status.class;
+                          })())}`} style={showArchivedOnly ? {backgroundColor: 'rgba(156, 163, 175, 0.1)', color: '#6b7280'} : {}}>
+                            {showArchivedOnly ? 'Archived' : ((() => {
                               const status = getWorkspaceStatus(workspace);
-                              return <span className={`status-badge ${status.class}`}>{status.label}</span>;
-                            })()
-                          )}
-                        </td>
-                        <td className="workspace-actions">
+                              return status.label;
+                            })())}
+                          </span>
+                        </div>
+                        <div className="card-actions">
                           {showArchivedOnly ? (
                             <button
                               className="restore-workspace-btn"
                               onClick={() => handleUnarchiveClick(workspace)}
                               title="Restore workspace"
                             >
-                              <RotateCcw size={16} />
+                              <RotateCcw size={18} />
                             </button>
                           ) : (
                             <>
@@ -1107,22 +1075,43 @@ const AdminDashboard = () => {
                                 onClick={() => handleArchiveClick(workspace)}
                                 title="Archive workspace"
                               >
-                                <Archive size={16} />
+                                <Archive size={18} />
                               </button>
                               <button
                                 className="delete-workspace-btn"
                                 onClick={() => handleDeleteClick(workspace)}
                                 title="Delete workspace"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={18} />
                               </button>
                             </>
                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                      </div>
+
+                      <div className="card-content">
+                        <div className="card-info-row">
+                          <span className="info-label">Owner:</span>
+                          <span className="info-value">{workspace.owner?.full_name || 'Unknown'}</span>
+                        </div>
+                        <div className="card-info-row">
+                          <span className="info-label">Members:</span>
+                          <span className="info-value">{workspace.memberCount || 0}</span>
+                        </div>
+                        <div className="card-info-row">
+                          <span className="info-label">Projects:</span>
+                          <span className="info-value">{workspace.projectCount || 0}</span>
+                        </div>
+                        <div className="card-info-row">
+                          <span className="info-label">{showArchivedOnly ? 'Archived:' : 'Created:'}</span>
+                          <span className="info-value">
+                            {format(new Date(showArchivedOnly ? (workspace.archived_at || workspace.created_at) : workspace.created_at), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
