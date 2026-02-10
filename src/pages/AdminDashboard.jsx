@@ -1166,7 +1166,8 @@ const AdminDashboard = () => {
                 </div>
               )}
             </div>
-          )}
+          );
+          })()}
         </div>
 
         {/* Audit Log Section */}
