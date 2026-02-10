@@ -42,7 +42,7 @@ const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
 
   const systemAdminNavItems = [
     { path: '/admin/dashboard', icon: ShieldCheck, label: 'Dashboard' },
-    { path: '/admin/workspaces', icon: Building2, label: 'Workspaces' },
+    { path: '/admin/users', icon: Users, label: 'All Users' },
   ];
 
   const bottomNavItems = [

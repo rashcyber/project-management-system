@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import useNotificationStore from './notificationStore';
 
 const useSystemAdminStore = create((set, get) => ({
   workspaces: [],
@@ -127,6 +128,21 @@ const useSystemAdminStore = create((set, get) => ({
 
       if (error) throw error;
 
+      // Send notification to promoted user
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        await useNotificationStore.getState().createNotification({
+          userId,
+          type: 'system_admin_promoted',
+          title: 'You have been promoted',
+          message: 'You are now a System Administrator',
+          actorId: currentUser?.id,
+        });
+      } catch (notifError) {
+        console.error('Error sending promotion notification:', notifError);
+        // Don't fail the promotion if notification fails
+      }
+
       return { error: null };
     } catch (error) {
       return { error };
@@ -142,6 +158,21 @@ const useSystemAdminStore = create((set, get) => ({
         .eq('id', userId);
 
       if (error) throw error;
+
+      // Send notification to demoted user
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        await useNotificationStore.getState().createNotification({
+          userId,
+          type: 'system_admin_demoted',
+          title: 'You have been demoted',
+          message: 'Your System Administrator privileges have been revoked',
+          actorId: currentUser?.id,
+        });
+      } catch (notifError) {
+        console.error('Error sending demotion notification:', notifError);
+        // Don't fail the demotion if notification fails
+      }
 
       return { error: null };
     } catch (error) {

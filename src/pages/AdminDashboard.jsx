@@ -462,6 +462,19 @@ const AdminDashboard = () => {
     setWorkspaceHealth(calculatedHealth);
   }, [calculatedHealth]);
 
+  // Helper function to get workspace status
+  const getWorkspaceStatus = (workspace) => {
+    if (!workspace.projectCount || workspace.projectCount === 0) {
+      return { label: 'Empty', class: 'empty' };
+    }
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const updatedAt = new Date(workspace.updated_at);
+    if (updatedAt < thirtyDaysAgo) {
+      return { label: 'Inactive', class: 'inactive' };
+    }
+    return { label: 'Active', class: 'active' };
+  };
+
   if (loading && workspaces.length === 0) {
     return <Loading />;
   }
@@ -750,7 +763,10 @@ const AdminDashboard = () => {
                         {format(new Date(workspace.created_at), 'MMM d, yyyy')}
                       </td>
                       <td className="workspace-status">
-                        <span className="status-badge active">Active</span>
+                        {(() => {
+                          const status = getWorkspaceStatus(workspace);
+                          return <span className={`status-badge ${status.class}`}>{status.label}</span>;
+                        })()}
                       </td>
                       <td className="workspace-actions">
                         <button

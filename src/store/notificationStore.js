@@ -256,6 +256,28 @@ const useNotificationStore = create((set, get) => ({
     };
   },
 
+  // Create a new notification (for system events)
+  createNotification: async ({ userId, type, title, message, actorId }) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          type,
+          title,
+          message,
+          actor_id: actorId,
+          read: false,
+        });
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      return { error };
+    }
+  },
+
   // ============ EMAIL NOTIFICATION PREFERENCES ============
 
   // Fetch user's email notification preferences

@@ -9,6 +9,8 @@ import {
   Trash2,
   CheckCheck,
   FolderKanban,
+  Shield,
+  ShieldOff,
 } from 'lucide-react';
 import { Button, Avatar } from '../components/common';
 import useNotificationStore from '../store/notificationStore';
@@ -22,6 +24,9 @@ const NOTIFICATION_ICONS = {
   due_reminder: Clock,
   project_invite: FolderKanban,
   mention: MessageSquare,
+  system_admin_promoted: Shield,
+  system_admin_demoted: ShieldOff,
+  workspace_deleted: Trash2,
 };
 
 const Notifications = () => {
