@@ -9,7 +9,9 @@ CREATE INDEX IF NOT EXISTS idx_workspaces_archived_at ON workspaces(archived_at)
 
 -- Update RLS policy to allow system admins to update workspaces (for archive)
 -- This allows system admins to update the is_archived, archived_at, archived_by fields
-CREATE POLICY IF NOT EXISTS "System admins can update any workspace"
+DROP POLICY IF EXISTS "System admins can update any workspace" ON workspaces;
+
+CREATE POLICY "System admins can update any workspace"
   ON workspaces
   FOR UPDATE
   USING (
