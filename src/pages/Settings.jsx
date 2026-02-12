@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Mail,
@@ -8,6 +8,9 @@ import {
   EyeOff,
   Save,
   Check,
+  Palette,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Button, Avatar } from '../components/common';
 import EmailNotificationSettings from '../components/EmailNotificationSettings';
@@ -21,6 +24,12 @@ const Settings = () => {
 
   const [activeTab, setActiveTab] = useState('profile');
   const [isLoading, setIsLoading] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const theme = document.documentElement.getAttribute('data-theme');
+    setIsDarkMode(theme === 'dark');
+  }, []);
 
   // Profile form state
   const [profileData, setProfileData] = useState({
@@ -151,10 +160,19 @@ const Settings = () => {
     toast.success('Notification preferences saved');
   };
 
+  const handleThemeToggle = () => {
+    const newTheme = isDarkMode ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    setIsDarkMode(!isDarkMode);
+    toast.success(`Switched to ${newTheme} mode`);
+  };
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
   ];
 
   return (
@@ -355,6 +373,55 @@ const Settings = () => {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Appearance Tab */}
+      {activeTab === 'appearance' && (
+        <div className="settings-card">
+          <div className="card-header">
+            <h2>Appearance</h2>
+            <p>Customize how the app looks and feels</p>
+          </div>
+
+          <div className="card-body">
+            <div className="appearance-section">
+              <div className="theme-selector">
+                <div className="theme-option light" style={{ opacity: !isDarkMode ? 1 : 0.5 }}>
+                  <div className="theme-preview">
+                    <div className="preview-light" />
+                  </div>
+                  <span>Light Mode</span>
+                </div>
+
+                <div className="theme-toggle-wrapper">
+                  <button
+                    className={`theme-toggle ${isDarkMode ? 'dark' : 'light'}`}
+                    onClick={handleThemeToggle}
+                    title="Toggle theme"
+                  >
+                    <div className="toggle-indicator">
+                      {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
+                    </div>
+                  </button>
+                </div>
+
+                <div className="theme-option dark" style={{ opacity: isDarkMode ? 1 : 0.5 }}>
+                  <div className="theme-preview">
+                    <div className="preview-dark" />
+                  </div>
+                  <span>Dark Mode</span>
+                </div>
+              </div>
+
+              <div className="theme-description">
+                <p>Current theme: <strong>{isDarkMode ? 'Dark' : 'Light'} Mode</strong></p>
+                <p className="text-muted">
+                  Changes are applied instantly and saved automatically.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
