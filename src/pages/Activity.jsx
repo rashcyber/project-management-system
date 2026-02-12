@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
-import { Activity as ActivityIcon, Filter, RefreshCw } from 'lucide-react';
+import { Activity as ActivityIcon, Filter, RefreshCw, Search, X } from 'lucide-react';
 import { Button, Avatar, Loading } from '../components/common';
 import useActivityStore from '../store/activityStore';
 import useProjectStore from '../store/projectStore';
@@ -77,6 +77,7 @@ const Activity = () => {
   const { projects, fetchProjects } = useProjectStore();
   const [selectedProject, setSelectedProject] = useState('all');
   const [selectedAction, setSelectedAction] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchProjects();
@@ -94,8 +95,30 @@ const Activity = () => {
     if (selectedAction !== 'all' && activity.action !== selectedAction) {
       return false;
     }
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const userName = activity.user?.full_name?.toLowerCase() || '';
+      const taskTitle = activity.task?.title?.toLowerCase() || activity.details?.task_title?.toLowerCase() || '';
+      const projectName = activity.project?.name?.toLowerCase() || '';
+      const actionName = activity.action?.toLowerCase() || '';
+
+      return (
+        userName.includes(query) ||
+        taskTitle.includes(query) ||
+        projectName.includes(query) ||
+        actionName.includes(query)
+      );
+    }
     return true;
   });
+
+  const hasActiveFilters = searchQuery !== '' || selectedProject !== 'all' || selectedAction !== 'all';
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setSelectedProject('all');
+    setSelectedAction('all');
+  };
 
   const groupedActivities = groupActivitiesByDate(filteredActivities);
   const actionTypes = [...new Set(activities.map((a) => a.action))];
@@ -118,6 +141,17 @@ const Activity = () => {
       </div>
 
       <div className="activity-toolbar">
+        <div className="search-wrapper">
+          <Search size={18} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Search activities..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+          />
+        </div>
+
         <div className="filters">
           <div className="filter-group">
             <Filter size={16} />
@@ -149,6 +183,17 @@ const Activity = () => {
               ))}
             </select>
           </div>
+
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={resetFilters}
+              icon={<X size={16} />}
+            >
+              Clear Filters
+            </Button>
+          )}
         </div>
 
         <span className="activity-count">

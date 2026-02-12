@@ -45,6 +45,7 @@ const MyTasks = () => {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [showOverdueOnly, setShowOverdueOnly] = useState(false);
   const [sortBy, setSortBy] = useState('due_date');
+  const [groupBy, setGroupBy] = useState('none');
 
   useEffect(() => {
     if (searchParams.get('filter') === 'overdue') {
@@ -167,6 +168,41 @@ const MyTasks = () => {
     setShowOverdueOnly(false);
   };
 
+  const getGroupedTasks = () => {
+    const grouped = {};
+
+    if (groupBy === 'none') {
+      return { 'All Tasks': filteredTasks };
+    }
+
+    filteredTasks.forEach((task) => {
+      let groupKey = '';
+
+      switch (groupBy) {
+        case 'project':
+          groupKey = task.project?.name || 'No Project';
+          break;
+        case 'status':
+          groupKey = STATUS_CONFIG[task.status]?.label || task.status;
+          break;
+        case 'priority':
+          groupKey = PRIORITY_CONFIG[task.priority]?.label || task.priority;
+          break;
+        default:
+          return;
+      }
+
+      if (!grouped[groupKey]) {
+        grouped[groupKey] = [];
+      }
+      grouped[groupKey].push(task);
+    });
+
+    return grouped;
+  };
+
+  const groupedTasks = getGroupedTasks();
+
   return (
     <div className="my-tasks-page">
       <div className="my-tasks-header">
@@ -255,6 +291,17 @@ const MyTasks = () => {
             <option value="status">Sort by Status</option>
             <option value="title">Sort by Title</option>
           </select>
+
+          <select
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value)}
+            className="filter-select"
+          >
+            <option value="none">Group by: None</option>
+            <option value="project">Group by Project</option>
+            <option value="status">Group by Status</option>
+            <option value="priority">Group by Priority</option>
+          </select>
         </div>
       </div>
 
@@ -277,77 +324,87 @@ const MyTasks = () => {
         </div>
       ) : (
         <div className="my-tasks-list">
-          {filteredTasks.map((task) => {
-            const priority = PRIORITY_CONFIG[task.priority];
-            const status = STATUS_CONFIG[task.status];
-            const StatusIcon = status.icon;
-            const dueDateLabel = getDueDateLabel(task.due_date);
-            const isOverdue = task.due_date && isPast(new Date(task.due_date)) && task.status !== 'completed';
-
-            return (
-              <div key={task.id} className="my-task-item">
-                <button
-                  className={`task-check-btn ${task.status === 'completed' ? 'checked' : ''}`}
-                  onClick={() => handleStatusChange(
-                    task.id,
-                    task.status === 'completed' ? 'not_started' : 'completed'
-                  )}
-                  style={{ color: task.status === 'completed' ? status.color : undefined }}
-                >
-                  <StatusIcon size={20} />
-                </button>
-
-                <div
-                  className="task-content"
-                  onClick={() => navigate(`/projects/${task.project_id}/board`)}
-                >
-                  <div className="task-main">
-                    <span className={`task-title ${task.status === 'completed' ? 'completed' : ''}`}>
-                      {task.title}
-                    </span>
-                    <div className="task-meta">
-                      <span
-                        className="task-project"
-                        style={{ borderLeftColor: task.project?.color || '#3b82f6' }}
-                      >
-                        {task.project?.name}
-                      </span>
-                      {task.description && (
-                        <span className="task-description">
-                          {task.description.substring(0, 50)}
-                          {task.description.length > 50 ? '...' : ''}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="task-badges">
-                    <span
-                      className="priority-badge"
-                      style={{ backgroundColor: `${priority.color}20`, color: priority.color }}
-                    >
-                      <Flag size={12} />
-                      {priority.label}
-                    </span>
-
-                    {dueDateLabel && (
-                      <span className={`due-badge ${isOverdue ? 'overdue' : ''}`}>
-                        <Calendar size={12} />
-                        {dueDateLabel}
-                      </span>
-                    )}
-                  </div>
+          {Object.entries(groupedTasks).map(([groupName, groupTasks]) => (
+            <div key={groupName} className="task-group">
+              {groupBy !== 'none' && (
+                <div className="group-header">
+                  <h3>{groupName}</h3>
+                  <span className="group-count">{groupTasks.length}</span>
                 </div>
+              )}
+              {groupTasks.map((task) => {
+                const priority = PRIORITY_CONFIG[task.priority];
+                const status = STATUS_CONFIG[task.status];
+                const StatusIcon = status.icon;
+                const dueDateLabel = getDueDateLabel(task.due_date);
+                const isOverdue = task.due_date && isPast(new Date(task.due_date)) && task.status !== 'completed';
 
-                <button
-                  className="task-arrow"
-                  onClick={() => navigate(`/projects/${task.project_id}/board`)}
-                >
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            );
-          })}
+                return (
+                  <div key={task.id} className="my-task-item">
+                    <button
+                      className={`task-check-btn ${task.status === 'completed' ? 'checked' : ''}`}
+                      onClick={() => handleStatusChange(
+                        task.id,
+                        task.status === 'completed' ? 'not_started' : 'completed'
+                      )}
+                      style={{ color: task.status === 'completed' ? status.color : undefined }}
+                    >
+                      <StatusIcon size={20} />
+                    </button>
+
+                    <div
+                      className="task-content"
+                      onClick={() => navigate(`/projects/${task.project_id}/board`)}
+                    >
+                      <div className="task-main">
+                        <span className={`task-title ${task.status === 'completed' ? 'completed' : ''}`}>
+                          {task.title}
+                        </span>
+                        <div className="task-meta">
+                          <span
+                            className="task-project"
+                            style={{ borderLeftColor: task.project?.color || '#3b82f6' }}
+                          >
+                            {task.project?.name}
+                          </span>
+                          {task.description && (
+                            <span className="task-description">
+                              {task.description.substring(0, 50)}
+                              {task.description.length > 50 ? '...' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="task-badges">
+                        <span
+                          className="priority-badge"
+                          style={{ backgroundColor: `${priority.color}20`, color: priority.color }}
+                        >
+                          <Flag size={12} />
+                          {priority.label}
+                        </span>
+
+                        {dueDateLabel && (
+                          <span className={`due-badge ${isOverdue ? 'overdue' : ''}`}>
+                            <Calendar size={12} />
+                            {dueDateLabel}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      className="task-arrow"
+                      onClick={() => navigate(`/projects/${task.project_id}/board`)}
+                    >
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       )}
     </div>
