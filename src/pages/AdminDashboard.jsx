@@ -803,6 +803,21 @@ const AdminDashboard = () => {
               <span className="health-label">Active Workspaces</span>
               <span className="health-value">{workspaceHealth.activeWorkspaces}</span>
               <span className="health-subtext">Updated in last 30 days</span>
+              <div className="health-bar-container">
+                <div
+                  className="health-bar active"
+                  style={{
+                    width: stats.totalWorkspaces > 0
+                      ? `${(workspaceHealth.activeWorkspaces / stats.totalWorkspaces) * 100}%`
+                      : '0%'
+                  }}
+                />
+              </div>
+              {stats.totalWorkspaces > 0 && (
+                <span className="health-percentage">
+                  {Math.round((workspaceHealth.activeWorkspaces / stats.totalWorkspaces) * 100)}%
+                </span>
+              )}
             </div>
           </div>
 
@@ -814,6 +829,21 @@ const AdminDashboard = () => {
               <span className="health-label">Inactive Workspaces</span>
               <span className="health-value">{workspaceHealth.inactiveWorkspaces}</span>
               <span className="health-subtext">No updates in 30 days</span>
+              <div className="health-bar-container">
+                <div
+                  className="health-bar inactive"
+                  style={{
+                    width: stats.totalWorkspaces > 0
+                      ? `${(workspaceHealth.inactiveWorkspaces / stats.totalWorkspaces) * 100}%`
+                      : '0%'
+                  }}
+                />
+              </div>
+              {stats.totalWorkspaces > 0 && (
+                <span className="health-percentage">
+                  {Math.round((workspaceHealth.inactiveWorkspaces / stats.totalWorkspaces) * 100)}%
+                </span>
+              )}
             </div>
           </div>
 
@@ -825,6 +855,21 @@ const AdminDashboard = () => {
               <span className="health-label">Empty Workspaces</span>
               <span className="health-value">{workspaceHealth.emptyWorkspaces}</span>
               <span className="health-subtext">No projects created</span>
+              <div className="health-bar-container">
+                <div
+                  className="health-bar empty"
+                  style={{
+                    width: stats.totalWorkspaces > 0
+                      ? `${(workspaceHealth.emptyWorkspaces / stats.totalWorkspaces) * 100}%`
+                      : '0%'
+                  }}
+                />
+              </div>
+              {stats.totalWorkspaces > 0 && (
+                <span className="health-percentage">
+                  {Math.round((workspaceHealth.emptyWorkspaces / stats.totalWorkspaces) * 100)}%
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -1108,6 +1153,12 @@ const AdminDashboard = () => {
                             {format(new Date(showArchivedOnly ? (workspace.archived_at || workspace.created_at) : workspace.created_at), 'MMM d, yyyy')}
                           </span>
                         </div>
+                        {workspace.updated_at && (
+                          <div className="card-info-row">
+                            <span className="info-label">Last Updated:</span>
+                            <span className="info-value">{formatDistanceToNow(new Date(workspace.updated_at), { addSuffix: true })}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
