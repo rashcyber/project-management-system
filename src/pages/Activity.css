@@ -111,6 +111,9 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  max-height: calc(100vh - 240px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .activity-group {

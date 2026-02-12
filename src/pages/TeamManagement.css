@@ -135,6 +135,9 @@
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1px;
   background-color: var(--border-color);
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .member-card {

@@ -101,6 +101,8 @@
 .notifications-list {
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 240px);
+  overflow-y: auto;
 }
 
 .notification-item {

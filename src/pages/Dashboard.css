@@ -331,6 +331,8 @@
 .project-list {
   display: flex;
   flex-direction: column;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .project-item {
@@ -469,6 +471,8 @@
 .tasks-list {
   display: flex;
   flex-direction: column;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .task-item {
@@ -586,6 +590,8 @@
 .activity-list {
   display: flex;
   flex-direction: column;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .activity-item {
@@ -626,6 +632,8 @@
 .subtasks-list {
   display: flex;
   flex-direction: column;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .subtask-item {
@@ -717,6 +725,8 @@
 .deadlines-list {
   display: flex;
   flex-direction: column;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 @media (max-width: 1024px) {
@@ -1115,6 +1125,8 @@
 .today-schedule-list {
   display: flex;
   flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .today-schedule-item {
@@ -1173,6 +1185,8 @@
 .notification-list {
   display: flex;
   flex-direction: column;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .notification-item {
