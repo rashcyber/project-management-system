@@ -17,6 +17,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { Button, Input, Modal, Avatar, Loading, SkeletonLoader } from '../components/common';
+import ScrollToTop from '../components/ScrollToTop';
 import useProjectStore from '../store/projectStore';
 import useAuthStore from '../store/authStore';
 import useUserStore from '../store/userStore';
@@ -464,6 +465,7 @@ const Projects = () => {
           </div>
         </div>
       </Modal>
+      <ScrollToTop />
     </div>
   );
 };

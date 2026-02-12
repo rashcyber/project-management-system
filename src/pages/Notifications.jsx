@@ -13,6 +13,7 @@ import {
   ShieldOff,
 } from 'lucide-react';
 import { Button, Avatar } from '../components/common';
+import ScrollToTop from '../components/ScrollToTop';
 import useNotificationStore from '../store/notificationStore';
 import { format, formatDistanceToNow } from 'date-fns';
 import './Notifications.css';
@@ -182,6 +183,7 @@ const Notifications = () => {
           </div>
         )}
       </div>
+      <ScrollToTop />
     </div>
   );
 };

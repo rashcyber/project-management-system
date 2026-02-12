@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ListTodo, ArrowRight, CheckSquare, Calendar } from 'lucide-react';
 import { Button, Loading, Avatar } from '../components/common';
+import ScrollToTop from '../components/ScrollToTop';
 import useAuthStore from '../store/authStore';
 import { supabase } from '../lib/supabase';
 import { format, isPast, isToday } from 'date-fns';
@@ -138,6 +139,7 @@ const MySubtasks = () => {
           ))}
         </div>
       )}
+      <ScrollToTop />
     </div>
   );
 };

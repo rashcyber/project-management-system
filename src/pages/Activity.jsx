@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 import { Activity as ActivityIcon, Filter, RefreshCw, Search, X } from 'lucide-react';
 import { Button, Avatar, Loading } from '../components/common';
+import ScrollToTop from '../components/ScrollToTop';
 import useActivityStore from '../store/activityStore';
 import useProjectStore from '../store/projectStore';
 import './Activity.css';
@@ -261,6 +262,7 @@ const Activity = () => {
           ))}
         </div>
       )}
+      <ScrollToTop />
     </div>
   );
 };

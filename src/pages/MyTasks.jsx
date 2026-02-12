@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button, Avatar, Loading } from '../components/common';
+import ScrollToTop from '../components/ScrollToTop';
 import useAuthStore from '../store/authStore';
 import { supabase } from '../lib/supabase';
 import { format, isPast, isToday, isTomorrow, isThisWeek } from 'date-fns';
@@ -407,6 +408,7 @@ const MyTasks = () => {
           ))}
         </div>
       )}
+      <ScrollToTop />
     </div>
   );
 };
