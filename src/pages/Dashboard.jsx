@@ -552,6 +552,61 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Focus Card - Most Urgent Task */}
+      {(upcomingDeadlines.overdue.length > 0 || upcomingDeadlines.today.length > 0) && (
+        <div className="focus-card">
+          {upcomingDeadlines.overdue.length > 0 ? (
+            <>
+              <div className="focus-header overdue">
+                <AlertCircle size={20} />
+                <span>Urgent - Overdue Task</span>
+              </div>
+              {upcomingDeadlines.overdue[0] && (
+                <div
+                  className="focus-content"
+                  onClick={() => navigate(`/projects/${upcomingDeadlines.overdue[0].project_id}/board`)}
+                >
+                  <h3>{upcomingDeadlines.overdue[0].title}</h3>
+                  <div className="focus-meta">
+                    <span className="focus-project" style={{ borderLeftColor: upcomingDeadlines.overdue[0].project?.color || '#3b82f6' }}>
+                      {upcomingDeadlines.overdue[0].project?.name}
+                    </span>
+                    <span className={`focus-priority priority-${upcomingDeadlines.overdue[0].priority}`}>
+                      {upcomingDeadlines.overdue[0].priority}
+                    </span>
+                  </div>
+                  <p className="focus-cta">Click to view task →</p>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="focus-header today">
+                <Clock size={20} />
+                <span>Today's Top Priority</span>
+              </div>
+              {upcomingDeadlines.today[0] && (
+                <div
+                  className="focus-content"
+                  onClick={() => navigate(`/projects/${upcomingDeadlines.today[0].project_id}/board`)}
+                >
+                  <h3>{upcomingDeadlines.today[0].title}</h3>
+                  <div className="focus-meta">
+                    <span className="focus-project" style={{ borderLeftColor: upcomingDeadlines.today[0].project?.color || '#3b82f6' }}>
+                      {upcomingDeadlines.today[0].project?.name}
+                    </span>
+                    <span className={`focus-priority priority-${upcomingDeadlines.today[0].priority}`}>
+                      {upcomingDeadlines.today[0].priority}
+                    </span>
+                  </div>
+                  <p className="focus-cta">Click to view task →</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {/* Today's Schedule */}
       {upcomingDeadlines.today.length > 0 && (
         <div className="dashboard-card" style={{ marginBottom: '1.5rem' }}>
@@ -681,6 +736,13 @@ const Dashboard = () => {
                 <CheckSquare size={48} />
                 <h3>No tasks assigned</h3>
                 <p>Tasks assigned to you will appear here</p>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => navigate('/projects')}
+                >
+                  Go to Projects
+                </Button>
               </div>
             ) : (
               <div className="tasks-list">
@@ -744,6 +806,13 @@ const Dashboard = () => {
                 <ListTodo size={48} />
                 <h3>No subtasks assigned</h3>
                 <p>Subtasks assigned to you will appear here</p>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => navigate('/my-subtasks')}
+                >
+                  View Board
+                </Button>
               </div>
             ) : (
               <div className="subtasks-list">
