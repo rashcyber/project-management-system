@@ -146,6 +146,8 @@ const Layout = () => {
         onToggle={handleSidebarToggle}
         isMobile={isMobile}
         onClose={() => setSidebarOpen(false)}
+        isDarkMode={isDarkMode}
+        onThemeToggle={handleThemeToggle}
       />
 
       <div

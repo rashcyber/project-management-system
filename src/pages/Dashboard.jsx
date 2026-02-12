@@ -469,7 +469,10 @@ const Dashboard = () => {
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
-                      <span className="priority-count">{count}</span>
+                      <div className="priority-count-wrapper">
+                        <span className="priority-count">{count}</span>
+                        <span className="priority-percentage">{percentage}%</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -501,11 +504,14 @@ const Dashboard = () => {
                       </span>
                       <span className="distribution-count">{count}</span>
                     </div>
-                    <div className="distribution-bar-bg">
-                      <div
-                        className={`distribution-bar distribution-${status}`}
-                        style={{ width: `${percentage}%` }}
-                      />
+                    <div className="distribution-bar-wrapper">
+                      <div className="distribution-bar-bg">
+                        <div
+                          className={`distribution-bar distribution-${status}`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="distribution-percentage">{percentage}%</span>
                     </div>
                   </div>
                 );
@@ -621,20 +627,35 @@ const Dashboard = () => {
                 {projects.slice(0, 5).map((project) => (
                   <div
                     key={project.id}
-                    className="project-item"
+                    className="project-item-container"
                     onClick={() => navigate(`/projects/${project.id}/board`)}
                   >
-                    <div
-                      className="project-color"
-                      style={{ backgroundColor: project.color || '#3b82f6' }}
-                    />
-                    <div className="project-info">
-                      <span className="project-name">{project.name}</span>
-                      <span className="project-meta">
-                        {project.project_members?.length || 0} members
-                      </span>
+                    <div className="project-item">
+                      <div
+                        className="project-color"
+                        style={{ backgroundColor: project.color || '#3b82f6' }}
+                      />
+                      <div className="project-info">
+                        <span className="project-name">{project.name}</span>
+                        <span className="project-meta">
+                          {project.project_members?.length || 0} members
+                        </span>
+                      </div>
+                      <ArrowRight size={16} className="project-arrow" />
                     </div>
-                    <ArrowRight size={16} className="project-arrow" />
+                    <div className="project-progress">
+                      <div className="progress-bar-wrapper">
+                        <div className="progress-bar-bg">
+                          <div
+                            className="progress-bar"
+                            style={{ width: `${project.task_completion_percentage || 0}%` }}
+                          />
+                        </div>
+                        <span className="progress-percentage">
+                          {Math.round(project.task_completion_percentage || 0)}%
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

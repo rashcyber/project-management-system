@@ -16,13 +16,17 @@ import {
   Activity,
   ShieldCheck,
   Building2,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import useNotificationStore from '../../store/notificationStore';
 import { Avatar } from '../common';
 import './Sidebar.css';
 
-const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
+const Sidebar = ({ isOpen, onToggle, isMobile, onClose, isDarkMode, onThemeToggle }) => {
   const { profile, signOut, isAdmin, isSystemAdmin } = useAuthStore();
+  const { unreadCount } = useNotificationStore();
   const location = useLocation();
 
   const mainNavItems = [
@@ -166,6 +170,9 @@ const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
                     title={!isOpen ? item.label : undefined}
                   >
                     <item.icon size={20} />
+                    {item.path === '/notifications' && unreadCount > 0 && (
+                      <span className="notification-badge">{unreadCount}</span>
+                    )}
                     {isOpen && <span>{item.label}</span>}
                   </NavLink>
                 </li>
@@ -175,26 +182,37 @@ const Sidebar = ({ isOpen, onToggle, isMobile, onClose }) => {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="user-info">
-            <Avatar
-              src={profile?.avatar_url}
-              name={profile?.full_name}
-              size="small"
-            />
-            {isOpen && (
-              <div className="user-details">
-                <span className="user-name">{profile?.full_name || 'User'}</span>
-                <span className="user-role">{profile?.role || 'Member'}</span>
-              </div>
-            )}
+          <div className="footer-top">
+            <div className="user-info">
+              <Avatar
+                src={profile?.avatar_url}
+                name={profile?.full_name}
+                size="small"
+              />
+              {isOpen && (
+                <div className="user-details">
+                  <span className="user-name">{profile?.full_name || 'User'}</span>
+                  <span className="user-role">{profile?.role || 'Member'}</span>
+                </div>
+              )}
+            </div>
+            <button
+              className="logout-btn"
+              onClick={handleLogout}
+              title="Sign out"
+            >
+              <LogOut size={18} />
+              {isOpen && <span>Sign Out</span>}
+            </button>
           </div>
+          <div className="footer-divider"></div>
           <button
-            className="logout-btn"
-            onClick={handleLogout}
-            title="Sign out"
+            className="theme-toggle-btn"
+            onClick={onThemeToggle}
+            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            <LogOut size={18} />
-            {isOpen && <span>Sign Out</span>}
+            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            {isOpen && <span>{isDarkMode ? 'Light' : 'Dark'}</span>}
           </button>
         </div>
       </aside>
