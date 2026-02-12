@@ -210,9 +210,7 @@ const Projects = () => {
         </div>
       ) : (
         <div className="projects-grid">
-          {filteredProjects.map((project) => {
-            console.log('🎨 Rendering project:', { name: project.name, color: project.color });
-            return (
+          {filteredProjects.map((project) => (
             <div
               key={project.id}
               className="project-card"
@@ -272,9 +270,16 @@ const Projects = () => {
               <div className="project-progress-section">
                 <div className="progress-header">
                   <span className="progress-label" style={{ backgroundColor: project.color || '#3b82f6' }}>Progress</span>
-                  <span className="progress-percent">
-                    {project.task_completion_percentage ? Math.round(project.task_completion_percentage) : 0}%
-                  </span>
+                  <div className="progress-info">
+                    <span className="progress-percent">
+                      {project.task_completion_percentage ? Math.round(project.task_completion_percentage) : 0}%
+                    </span>
+                    {project.total_task_count && (
+                      <span className="task-count-badge">
+                        {project.completed_task_count || 0}/{project.total_task_count || 0}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="progress-bar-container">
                   <div
@@ -344,8 +349,7 @@ const Projects = () => {
                 </div>
               </div>
             </div>
-            );
-          })}
+          ))}
 
           {/* Load More Button */}
           {projectsHasMore && (

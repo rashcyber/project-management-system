@@ -329,10 +329,25 @@
   border-radius: 1px;
 }
 
+.progress-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .progress-percent {
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--primary);
+}
+
+.task-count-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background-color: var(--bg-secondary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
 }
 
 .progress-bar-container {
