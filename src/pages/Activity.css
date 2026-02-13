@@ -155,7 +155,9 @@
   background-color: var(--bg-primary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
-  overflow: hidden;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
 }
 
 .activity-group-header {
@@ -174,13 +176,24 @@
 }
 
 .group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  background-color: var(--primary);
+  color: white;
+  border-radius: 10px;
   font-size: 0.75rem;
-  color: var(--text-muted);
+  font-weight: 600;
+  padding: 0 0.5rem;
 }
 
 .activity-list {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  overflow: visible;
 }
 
 .activity-item {
@@ -190,6 +203,7 @@
   padding: 0.875rem 1.25rem;
   border-bottom: 1px solid var(--border-light);
   transition: background-color var(--transition-fast);
+  min-width: 0;
 }
 
 .activity-item:last-child {
@@ -213,6 +227,8 @@
   font-size: 0.875rem;
   color: var(--text-secondary);
   line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .activity-message strong {
